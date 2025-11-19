@@ -1,4 +1,5 @@
-import { Service, ServiceType, Therapist, Product } from './types';
+
+import { Service, ServiceType, Therapist, Product, Booking } from './types';
 
 export const SERVICES: Service[] = [
   {
@@ -47,7 +48,8 @@ export const THERAPISTS: Therapist[] = [
     skills: [ServiceType.THAI, ServiceType.FOOT],
     bio: 'Specialist in traditional Wat Pho style Thai massage. 15 years experience.',
     rating: 4.9,
-    available: true
+    available: true,
+    locationBase: 'Thong Sala'
   },
   {
     id: 't2',
@@ -56,7 +58,8 @@ export const THERAPISTS: Therapist[] = [
     skills: [ServiceType.THAI, ServiceType.OIL, ServiceType.DEEP_TISSUE, ServiceType.ALOE_VERA],
     bio: 'All-rounder with strong hands for deep tissue and a gentle touch for oil massage.',
     rating: 4.8,
-    available: true
+    available: true,
+    locationBase: 'Srithanu'
   },
   {
     id: 't3',
@@ -65,7 +68,8 @@ export const THERAPISTS: Therapist[] = [
     skills: [ServiceType.OIL, ServiceType.ALOE_VERA],
     bio: 'Expert in aromatherapy and skin care treatments.',
     rating: 4.7,
-    available: true
+    available: false, // Currently offline
+    locationBase: 'Haad Rin'
   }
 ];
 
@@ -98,4 +102,47 @@ export const PRODUCTS: Product[] = [
 
 export const TIME_SLOTS = [
   '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
+];
+
+// Mock Data for Google Maps Autocomplete
+export const KOH_PHANGAN_LOCATIONS = [
+  "Thong Sala Pier, Koh Phangan",
+  "Haad Rin Beach (Full Moon Party)",
+  "Srithanu Zen Beach",
+  "Haad Yao Beach",
+  "Secret Beach (Haad Son)",
+  "Bottle Beach",
+  "Thong Nai Pan Noi",
+  "Thong Nai Pan Yai",
+  "Baan Tai 7-Eleven",
+  "Chaloklum Fishing Village",
+  "Koh Ma (Mae Haad)",
+  "Than Sadet Waterfall"
+];
+
+export const MOCK_BOOKINGS: Booking[] = [
+  {
+    id: 'b1',
+    serviceId: 's1',
+    therapistId: 't1',
+    date: new Date().toISOString(),
+    time: '14:00',
+    duration: 60,
+    customerName: 'John Doe',
+    customerPhone: '+66 123 456 789',
+    location: 'Srithanu Zen Beach Bungalows, Bungalow B4',
+    status: 'confirmed'
+  },
+  {
+    id: 'b2',
+    serviceId: 's2',
+    therapistId: 't1',
+    date: new Date(Date.now() + 86400000).toISOString(),
+    time: '10:00',
+    duration: 90,
+    customerName: 'Sarah Smith',
+    customerPhone: '+49 151 444 555',
+    location: 'Baan Tai Villas',
+    status: 'pending'
+  }
 ];

@@ -1,3 +1,4 @@
+
 export enum ServiceType {
   THAI = 'Thai Massage',
   OIL = 'Oil Massage',
@@ -23,7 +24,8 @@ export interface Therapist {
   skills: ServiceType[];
   bio: string;
   rating: number;
-  available: boolean; // Simplified availability for MVP
+  available: boolean;
+  locationBase: string; // Where they are based
 }
 
 export interface Product {
@@ -44,5 +46,19 @@ export interface Booking {
   duration: 60 | 90;
   customerName: string;
   customerPhone: string;
-  status: 'pending' | 'confirmed' | 'completed';
+  location: string; // Address or Hotel Name
+  coordinates?: { lat: number; lng: number }; // For Maps
+  notes?: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'declined';
 }
+
+export type CreateBookingInput = Omit<Booking, 'id' | 'status'>;
+
+export interface User {
+  id: string;
+  role: 'customer' | 'therapist' | 'admin';
+  name: string;
+  email: string;
+}
+
+export type Language = 'en' | 'de' | 'th' | 'fr' | 'es' | 'zh' | 'hi' | 'ar';
