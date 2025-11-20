@@ -9,8 +9,8 @@ import SEOStructuredData from '../components/SEOStructuredData';
 export default function Home() {
   useSEO({
     title: "Mobile Massage, Nails & Beauty - Koh Phangan",
-    description: "The #1 Mobile Spa on Koh Phangan. We offer Thai Massage, Gel Nails, Bridal Makeup, and Full Moon Party Styling at your villa.",
-    image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1600&q=80"
+    description: "The #1 Mobile Spa on Koh Phangan. We offer Thai Massage, Gel Nails, Bridal Makeup, and Full Moon Party styling at your villa.",
+    image: "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?auto=format&fit=crop&w=1600&q=80"
   });
 
   // Filter to show specific categories in different sections
@@ -23,10 +23,10 @@ export default function Home() {
       
       {/* Hero Section */}
       <div className="relative h-[85vh] w-full overflow-hidden">
-        <div className="absolute inset-0 bg-black/20 z-10"></div>
+        <div className="absolute inset-0 bg-black/10 z-10"></div>
         <img 
-          src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1600&q=80" 
-          alt="Beautiful Koh Phangan Beach with Coconut Palms and Turquoise Water" 
+          src="https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?auto=format&fit=crop&w=1600&q=80" 
+          alt="Stunning Koh Phangan Bay with Turquoise Water and Palms" 
           className="absolute inset-0 w-full h-full object-cover"
           width="1600"
           height="900"
@@ -37,9 +37,9 @@ export default function Home() {
           <h1 className="font-serif text-5xl md:text-7xl text-white font-bold mb-6 drop-shadow-lg">
             Phangan Serenity
           </h1>
-          <p className="text-white/95 text-lg md:text-2xl max-w-xl mb-10 font-light leading-relaxed drop-shadow-md">
+          <p className="text-white/95 text-lg md:text-2xl max-w-xl mb-10 font-light leading-relaxed drop-shadow-md bg-black/10 backdrop-blur-[2px] rounded-xl p-4">
             Mobile Massage & Beauty Spa<br/>
-            <span className="text-base opacity-90">Massage • Nails • Full Moon Styling</span>
+            <span className="text-base opacity-90 font-medium">Massage • Nails • Full Moon Styling</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link 
