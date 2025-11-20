@@ -10,7 +10,6 @@ export default function TherapistDashboard() {
   // Use the logged-in user's ID as the therapist ID
   const loggedInTherapistId = user?.id || 't1';
 
-  const { updateBookingStatus, toggleTherapistBlock } = useData();
   const { data: therapists = [], isLoading: therapistsLoading } = useTherapists();
   const { data: allBookings = [], isLoading: bookingsLoading } = useBookings(loggedInTherapistId);
 

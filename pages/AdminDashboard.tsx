@@ -1,16 +1,21 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData, useLanguage, useAuth } from '../contexts';
+import { useTherapists } from '../lib/queries';
 import { TrendingUp, TrendingDown, DollarSign, Plus, ShoppingBag, User, Lock, Users, CheckCircle, Power, X, Save, Paperclip, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Expense } from '../types';
 
 export default function AdminDashboard() {
-  const { bookings, expenses, therapists, updateTherapist, addExpense, isLoading } = useData();
+  // --- ALL HOOKS MUST BE CALLED FIRST (before any conditional logic) ---
+  const { bookings, expenses, updateTherapist, addExpense, isLoading } = useData();
   const { user, isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  // Fetch therapists from Supabase (real-time data, not context state)
+  const { data: dbTherapists = [], isLoading: therapistsLoading, refetch: refetchTherapists } = useTherapists();
   const [timeRange, setTimeRange] = useState<'today' | 'month' | 'year'>('month');
   const [activeTab, setActiveTab] = useState<'financial' | 'team'>('financial');
 
@@ -24,7 +29,7 @@ export default function AdminDashboard() {
   // State for the file attachment
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
-  // --- SECURITY GUARD ---
+  // --- SECURITY GUARD (MUST be in useEffect, not early return) ---
   useEffect(() => {
       if (!isAuthenticated) {
           navigate('/login');
@@ -33,16 +38,7 @@ export default function AdminDashboard() {
       }
   }, [isAuthenticated, user, navigate]);
 
-  if (!user || user.role !== 'admin') {
-      return (
-        <div className="h-screen flex items-center justify-center flex-col gap-4">
-            <Lock size={48} className="text-gray-300" />
-            <p className="text-gray-500">Verifying Access...</p>
-        </div>
-      );
-  }
-
-  // --- Filtering Logic ---
+  // --- Filtering Logic (MUST be before early return) ---
   const filteredData = useMemo(() => {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -51,17 +47,27 @@ export default function AdminDashboard() {
 
       const filterDate = timeRange === 'today' ? startOfDay : timeRange === 'month' ? startOfMonth : startOfYear;
 
-      const filteredBookings = bookings.filter(b => 
-          new Date(b.date) >= filterDate && 
+      const filteredBookings = bookings.filter(b =>
+          new Date(b.date) >= filterDate &&
           (b.status === 'confirmed' || b.status === 'completed' || b.status === 'in_progress')
       );
 
-      const filteredExpenses = expenses.filter(e => 
+      const filteredExpenses = expenses.filter(e =>
           new Date(e.date) >= filterDate
       );
 
       return { bookings: filteredBookings, expenses: filteredExpenses };
   }, [bookings, expenses, timeRange]);
+
+  // --- NOW we can do conditional rendering (after all hooks) ---
+  if (!user || user.role !== 'admin') {
+      return (
+        <div className="h-screen flex items-center justify-center flex-col gap-4">
+            <Lock size={48} className="text-gray-300" />
+            <p className="text-gray-500">Verifying Access...</p>
+        </div>
+      );
+  }
 
   // --- Calculation Logic ---
   const totalRevenue = filteredData.bookings.reduce((sum, b) => sum + b.totalPrice, 0);
@@ -354,6 +360,15 @@ export default function AdminDashboard() {
                   <p className="text-sm text-gray-500">Manage availability and verification status of your team.</p>
               </div>
               <div className="overflow-x-auto">
+                  {therapistsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                          <LoadingSpinner />
+                      </div>
+                  ) : dbTherapists.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                          No therapists found. Create profiles with role "therapist" in Supabase.
+                      </div>
+                  ) : (
                   <table className="w-full text-sm">
                       <thead className="bg-gray-50 text-gray-500">
                           <tr>
@@ -365,20 +380,32 @@ export default function AdminDashboard() {
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                          {therapists.map(t => (
+                          {dbTherapists.map(t => {
+                              // Map Supabase fields to Therapist interface (handle both naming conventions)
+                              const therapist = {
+                                  ...t,
+                                  name: (t as any).full_name || (t as any).name || 'Unknown',
+                                  image: (t as any).avatar_url || (t as any).image || '/default-avatar.png',
+                                  skills: (t as any).skills || [],
+                                  locationBase: (t as any).location_base || (t as any).locationBase || 'Not specified',
+                                  available: (t as any).available ?? true,
+                                  verified: (t as any).is_verified || (t as any).verified || false
+                              };
+
+                              return (
                               <tr key={t.id} className="hover:bg-gray-50">
                                   <td className="px-6 py-4">
                                       <div className="flex items-center gap-3">
-                                          <img src={t.image} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
+                                          <img src={therapist.image} alt={therapist.name} className="w-10 h-10 rounded-full object-cover" onError={(e) => {e.currentTarget.src = '/default-avatar.png'}} />
                                           <div>
-                                              <div className="font-bold text-gray-900">{t.name}</div>
-                                              <div className="text-xs text-gray-500">{t.skills.length} Skills</div>
+                                              <div className="font-bold text-gray-900">{therapist.name}</div>
+                                              <div className="text-xs text-gray-500">{therapist.skills?.length || 0} Skills</div>
                                           </div>
                                       </div>
                                   </td>
-                                  <td className="px-6 py-4 text-gray-600">{t.locationBase}</td>
+                                  <td className="px-6 py-4 text-gray-600">{therapist.locationBase}</td>
                                   <td className="px-6 py-4 text-center">
-                                      {t.verified ? (
+                                      {therapist.verified ? (
                                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
                                               <CheckCircle size={12} /> Verified
                                           </span>
@@ -389,7 +416,7 @@ export default function AdminDashboard() {
                                       )}
                                   </td>
                                   <td className="px-6 py-4 text-center">
-                                      {t.available ? (
+                                      {therapist.available ? (
                                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">
                                               <Power size={12} /> Online
                                           </span>
@@ -401,24 +428,32 @@ export default function AdminDashboard() {
                                   </td>
                                   <td className="px-6 py-4 text-center">
                                       <div className="flex items-center justify-center gap-2">
-                                          <button 
-                                            onClick={() => updateTherapist(t.id, { verified: !t.verified })}
+                                          <button
+                                            onClick={async () => {
+                                              await updateTherapist(t.id, { verified: !therapist.verified });
+                                              refetchTherapists();
+                                            }}
                                             className="text-xs px-3 py-1 border rounded hover:bg-gray-50"
                                           >
                                               Toggle Verify
                                           </button>
-                                          <button 
-                                            onClick={() => updateTherapist(t.id, { available: !t.available })}
-                                            className={`text-xs px-3 py-1 border rounded text-white ${t.available ? 'bg-red-500 hover:bg-red-600 border-red-600' : 'bg-green-500 hover:bg-green-600 border-green-600'}`}
+                                          <button
+                                            onClick={async () => {
+                                              await updateTherapist(t.id, { available: !therapist.available });
+                                              refetchTherapists();
+                                            }}
+                                            className={`text-xs px-3 py-1 border rounded text-white ${therapist.available ? 'bg-red-500 hover:bg-red-600 border-red-600' : 'bg-green-500 hover:bg-green-600 border-green-600'}`}
                                           >
-                                              {t.available ? 'Disable' : 'Enable'}
+                                              {therapist.available ? 'Disable' : 'Enable'}
                                           </button>
                                       </div>
                                   </td>
                               </tr>
-                          ))}
+                              );
+                          })}
                       </tbody>
                   </table>
+                  )}
               </div>
           </div>
       )}

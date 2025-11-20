@@ -3,12 +3,12 @@ import React, { useMemo } from 'react';
 import { Calendar, MapPin, Clock, AlertTriangle, Check, Bike, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useData, useAuth, useLanguage } from '../contexts';
-import { useServices } from '../lib/queries';
+import { useServices, useBookings } from '../lib/queries';
 import { Booking } from '../types';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
-  const { bookings } = useData();
+  const { data: bookings = [] } = useBookings(user?.id);
   const { t } = useLanguage();
   const { data: services = [], isLoading: servicesLoading } = useServices();
 

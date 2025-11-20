@@ -1,10 +1,10 @@
-
+﻿
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand, Crosshair, Users, Phone, Mail } from 'lucide-react';
 import { TIME_SLOTS, BOOKING_ADDONS } from '../constants';
 import { useAuth, useLanguage, useData } from '../contexts';
-import { useServices, useTherapists } from '../lib/queries';
+import { useServices, useTherapists, checkAvailability } from '../lib/queries';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
 import { ServiceCategory } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -25,9 +25,9 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
-  const { addBooking, isLoading: contextIsLoading, error: contextError, checkAvailability } = useData();
+  const { addBooking, isLoading: contextIsLoading, error: contextError } = useData();
 
-  // ✅ Fetch data from Supabase via React Query
+  // âœ… Fetch data from Supabase via React Query
   const { data: services = [], isLoading: servicesLoading, error: servicesError } = useServices();
   const { data: therapists = [], isLoading: therapistsLoading, error: therapistsError } = useTherapists();
 
@@ -200,7 +200,7 @@ export default function BookingPage() {
             const { latitude, longitude } = position.coords;
             setCustomerDetails(prev => ({
                 ...prev,
-                address: `📍 GPS Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+                address: `ðŸ“ GPS Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
             }));
             setIsLocating(false);
         },
@@ -272,11 +272,13 @@ export default function BookingPage() {
     if (selectedServiceId && selectedTherapistId && selectedTime) {
         try {
             await addBooking({
+                customerId: user?.id,
                 serviceId: selectedServiceId,
                 therapistId: selectedTherapistId,
                 date: selectedDate.toISOString(),
                 time: selectedTime,
                 duration: duration,
+                coordinates: undefined,
                 addons: selectedAddons,
                 totalPrice: totalPrice,
                 customerName: customerDetails.name,
@@ -358,7 +360,7 @@ export default function BookingPage() {
              on {selectedDate.toLocaleDateString()} at {selectedTime}.
           </span>
           <span className="block mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
-             📧 A confirmation email has been sent to {customerDetails.email}
+             ðŸ“§ A confirmation email has been sent to {customerDetails.email}
           </span>
         </p>
         
@@ -422,7 +424,7 @@ export default function BookingPage() {
                     >
                         {cat === 'Nails' && <Hand size={16} />}
                         {cat === 'Packages' && <Sparkles size={16} />}
-                        {cat === 'Massage' && <span className="text-lg">💆‍♀️</span>}
+                        {cat === 'Massage' && <span className="text-lg">ðŸ’†â€â™€ï¸</span>}
                         {cat}
                     </button>
                 ))}

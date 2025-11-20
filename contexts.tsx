@@ -29,14 +29,25 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const fetchUserProfile = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      return data || null;
+    };
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
         setUser({
           id: session.user.id,
-          role: (session.user.user_metadata?.role || 'customer') as any,
-          name: session.user.user_metadata?.full_name || session.user.email || 'User',
+          role: (profile?.role || 'customer') as any,
+          name: profile?.full_name || session.user.email || 'User',
           email: session.user.email || '',
-          avatar_url: session.user.user_metadata?.avatar_url
+          avatar_url: profile?.avatar_url
         });
       }
       setIsLoadingAuth(false);
@@ -44,12 +55,14 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          role: (session.user.user_metadata?.role || 'customer') as any,
-          name: session.user.user_metadata?.full_name || session.user.email || 'User',
-          email: session.user.email || '',
-          avatar_url: session.user.user_metadata?.avatar_url
+        fetchUserProfile(session.user.id).then((profile) => {
+          setUser({
+            id: session.user.id,
+            role: (profile?.role || 'customer') as any,
+            name: profile?.full_name || session.user.email || 'User',
+            email: session.user.email || '',
+            avatar_url: profile?.avatar_url
+          });
         });
       } else {
         setUser(null);
@@ -100,21 +113,9 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
 
     if (error) throw error;
 
-    // Create profile entry for the user
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          email: data.user.email,
-          role: metadata.role,
-          full_name: metadata.fullName
-        });
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.warn('Profile creation warning:', profileError);
-      }
-    }
+    // ✅ NOTE: Profile is now created automatically by the database trigger
+    // No need to manually insert it here - the trigger on auth.users handles it
+    console.log('✅ User signed up:', data.user?.email, '- Profile will be created by trigger');
   };
 
   const logout = async () => {
@@ -287,11 +288,39 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
   
   const updateTherapist = async (id: string, updates: Partial<Therapist>) => {
       setIsLoading(true);
+      setError(null);
       try {
-          await delay(500);
+          // Try to save to Supabase first
+          if (supabase) {
+              // Map TypeScript types to Supabase column names
+              const dbUpdates: any = {};
+              if ('verified' in updates) {
+                  dbUpdates.is_verified = updates.verified;
+              }
+              if ('available' in updates) {
+                  dbUpdates.available = updates.available;
+              }
+              if ('name' in updates) {
+                  dbUpdates.full_name = updates.name;
+              }
+
+              const { error: dbError } = await supabase
+                  .from('profiles')
+                  .update(dbUpdates)
+                  .eq('id', id);
+
+              if (dbError) throw dbError;
+              console.log("Therapist updated in Supabase:", id, dbUpdates);
+          } else {
+              // Fallback for when Supabase is not configured
+              await delay(500);
+          }
+
+          // Update local state
           setTherapists(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-      } catch (e) {
+      } catch (e: any) {
           setError("Failed to update therapist.");
+          console.error("Update therapist error:", e);
       } finally {
           setIsLoading(false);
       }

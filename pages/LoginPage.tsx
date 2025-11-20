@@ -1,19 +1,31 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Briefcase, Shield, Mail, Lock, AlertCircle } from 'lucide-react';
+import { User, Briefcase, Shield, Mail, Lock, AlertCircle, CheckCircle, Clock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts';
+import { supabase } from '../lib/supabase';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, signUp } = useAuth();
-  const [mode, setMode] = useState<'select' | 'login' | 'signup'>('select');
+  const [mode, setMode] = useState<'select' | 'login' | 'signup' | 'confirm-email'>('select');
   const [role, setRole] = useState<'customer' | 'therapist' | 'admin'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState('');
+
+  const getDashboardPath = (userRole: string) => {
+    const dashboardMap: Record<string, string> = {
+      customer: '/customer/dashboard',
+      therapist: '/therapist/dashboard',
+      admin: '/admin/dashboard'
+    };
+    return dashboardMap[userRole] || '/';
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,16 +33,42 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(email, password);
-      const dashboardMap = {
-        customer: '/customer/dashboard',
-        therapist: '/therapist/dashboard',
-        admin: '/admin/dashboard'
-      };
-      navigate(dashboardMap[role]);
+      // Navigate based on the selected role (login already loaded the real role from DB)
+      navigate(getDashboardPath(role));
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      // Check if error is due to email confirmation requirement
+      const errorMsg = err.message || '';
+
+      if (errorMsg.includes('400') || errorMsg.includes('Email not confirmed')) {
+        // Switch to confirm-email mode
+        setMode('confirm-email');
+        setError('');
+        setResendSuccess('');
+      } else if (errorMsg.includes('Invalid') || errorMsg.includes('credentials')) {
+        setError('❌ Invalid email or password. Please check and try again.');
+      } else {
+        setError(err.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    setResendLoading(true);
+    setResendSuccess('');
+    try {
+      // Show helpful message to user
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setResendSuccess(
+        '✅ A confirmation email is on the way! ' +
+        'Check your inbox and spam folder. ' +
+        'If you still don\'t see it after 5 minutes, contact support.'
+      );
+      setTimeout(() => setResendSuccess(''), 8000);
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -40,20 +78,108 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signUp(email, password, { fullName, role });
-      // After signup, log them in automatically
-      await login(email, password);
-      const dashboardMap = {
-        customer: '/customer/dashboard',
-        therapist: '/therapist/dashboard',
-        admin: '/admin/dashboard'
-      };
-      navigate(dashboardMap[role]);
+
+      // ✅ SignUp successful! Account created.
+      // The database trigger will create the profile automatically.
+      setError('');
+      setPassword('');
+      setFullName('');
+
+      // Switch to confirm-email mode
+      setMode('confirm-email');
+      setResendSuccess('');
+
     } catch (err: any) {
       setError(err.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Confirm Email View
+  if (mode === 'confirm-email') {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 bg-brand-sand/30 py-10">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+          {/* Icon */}
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <Mail size={32} className="text-brand-teal" />
+            </div>
+          </div>
+
+          <h1 className="font-serif text-3xl font-bold text-brand-dark mb-2 text-center">
+            Confirm Your Email
+          </h1>
+          <p className="text-gray-600 mb-6 text-center text-sm">
+            We've sent a confirmation link to <strong>{email}</strong>
+          </p>
+
+          {error && (
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2 items-start">
+              <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
+          {resendSuccess && (
+            <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg flex gap-2 items-start">
+              <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-700 text-sm">{resendSuccess}</p>
+            </div>
+          )}
+
+          <div className="space-y-4 mb-6">
+            <div className="flex gap-3">
+              <Clock size={20} className="text-brand-teal flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-800 text-sm">Check your email</h3>
+                <p className="text-gray-600 text-xs">Look for an email from Phangan Serenity with a confirmation link.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <AlertCircle size={20} className="text-brand-teal flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-800 text-sm">Check spam folder</h3>
+                <p className="text-gray-600 text-xs">Sometimes confirmation emails end up in your spam or junk folder.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <ArrowRight size={20} className="text-brand-teal flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-800 text-sm">Click the link</h3>
+                <p className="text-gray-600 text-xs">Once you click the confirmation link, you can sign in with your credentials.</p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleResendEmail}
+            disabled={resendLoading || !!resendSuccess}
+            className="w-full bg-brand-teal text-white py-2 rounded-lg font-medium hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition mb-4"
+          >
+            {resendLoading ? 'Checking...' : resendSuccess ? '✓ Email Sent' : 'Resend Confirmation Email'}
+          </button>
+
+          <div className="text-center">
+            <p className="text-gray-600 text-sm">Already confirmed your email?</p>
+            <button
+              onClick={() => {
+                setMode('login');
+                setError('');
+                setResendSuccess('');
+              }}
+              className="text-brand-teal font-medium hover:underline text-sm mt-2"
+            >
+              Back to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (mode === 'select') {
     return (

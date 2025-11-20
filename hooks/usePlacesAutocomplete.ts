@@ -11,7 +11,7 @@ export function usePlacesAutocomplete(input: string) {
   const [isLoading, setIsLoading] = useState(false);
 
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  
+
   // Logik: Wenn Key da ist und NICHT der Platzhalter, nutzen wir Google.
   const USE_REAL_GOOGLE_API = !!GOOGLE_API_KEY && GOOGLE_API_KEY !== 'your_google_maps_api_key_here';
 
@@ -36,16 +36,15 @@ export function usePlacesAutocomplete(input: string) {
 
       if (USE_REAL_GOOGLE_API && window.google && window.google.maps) {
         // --- ECHTE GOOGLE API LOGIK ---
-        /*
         if (!autocompleteService.current) {
             autocompleteService.current = new window.google.maps.places.AutocompleteService();
         }
-        
+
         const request = {
             input: input,
-            componentRestrictions: { country: 'th' }, 
+            componentRestrictions: { country: 'th' },
         };
-        
+
         autocompleteService.current.getPlacePredictions(request, (results: any, status: any) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
                 setPredictions(results.map((r: any) => ({
@@ -57,21 +56,13 @@ export function usePlacesAutocomplete(input: string) {
             }
             setIsLoading(false);
         });
-        */
-        
-        // Fallback solange Code auskommentiert ist:
-        const matches = KOH_PHANGAN_LOCATIONS.filter(loc => 
-            loc.toLowerCase().includes(input.toLowerCase())
-          ).map(loc => ({ description: loc }));
-          setPredictions(matches);
-          setIsLoading(false);
 
       } else {
-        // --- MOCK LOGIK (Fallback) ---
-        const matches = KOH_PHANGAN_LOCATIONS.filter(loc => 
+        // --- FALLBACK: Use local Koh Phangan locations when API not available ---
+        const matches = KOH_PHANGAN_LOCATIONS.filter(loc =>
           loc.toLowerCase().includes(input.toLowerCase())
         ).map(loc => ({ description: loc }));
-        
+
         setPredictions(matches);
         setIsLoading(false);
       }

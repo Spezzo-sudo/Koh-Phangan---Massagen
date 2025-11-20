@@ -1,17 +1,14 @@
-
-import React, { useState } from 'react';
-import { ShoppingBag, Plus, X, Minus, Trash2, ShoppingCart, CheckCircle, Truck, AlertCircle } from 'lucide-react';
-import { useData, useAuth } from '../contexts';
+import React, { useState, useMemo } from 'react';
+import { Search, ShoppingBag, Plus, X, MapPin, Minus } from 'lucide-react';
+import { useAuth, useData } from '../contexts';
+import { useServices } from '../lib/queries';
 import { useNavigate } from 'react-router-dom';
-
-// ⚠️ NOTE: PRODUCTS are now loaded from Supabase public.products table
-// TODO: Implement useProducts() hook in lib/queries.ts for Phase 2
-const PRODUCTS: any[] = []; // Empty for now - shop feature coming in Phase 2
+import LoadingSpinner from '../components/LoadingSpinner';
+import { Product, CartItem } from '../types';
 
 export default function ShopPage() {
+  const { user, isAuthenticated } = useAuth();
   const { addToCart, cart, removeFromCart, updateCartQuantity, cartTotal, clearCart } = useData();
-  const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isCartOpen, setIsCartOpen] = useState(false);
