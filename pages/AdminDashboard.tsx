@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const { data: dbTherapists = [], isLoading: therapistsLoading, refetch: refetchTherapists } = useTherapists();
   const [timeRange, setTimeRange] = useState<'today' | 'month' | 'year'>('month');
   const [activeTab, setActiveTab] = useState<'financial' | 'team'>('financial');
+  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // --- ADD EXPENSE MODAL STATE ---
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -164,6 +165,19 @@ export default function AdminDashboard() {
              </button>
           </div>
       </div>
+
+      {/* Feedback Message */}
+      {feedbackMessage && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+              feedbackMessage.type === 'success'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+          }`}>
+              <p className={feedbackMessage.type === 'success' ? 'text-green-700' : 'text-red-700'}>
+                  {feedbackMessage.text}
+              </p>
+          </div>
+      )}
 
       {activeTab === 'financial' && (
       <>
@@ -430,8 +444,21 @@ export default function AdminDashboard() {
                                       <div className="flex items-center justify-center gap-2">
                                           <button
                                             onClick={async () => {
-                                              await updateTherapist(t.id, { verified: !therapist.verified });
-                                              refetchTherapists();
+                                              try {
+                                                await updateTherapist(t.id, { verified: !therapist.verified });
+                                                refetchTherapists();
+                                                const status = !therapist.verified ? 'verified ✅' : 'unverified';
+                                                setFeedbackMessage({
+                                                  type: 'success',
+                                                  text: `${therapist.name} is now ${status}`
+                                                });
+                                                setTimeout(() => setFeedbackMessage(null), 3000);
+                                              } catch (err) {
+                                                setFeedbackMessage({
+                                                  type: 'error',
+                                                  text: 'Failed to update verification status'
+                                                });
+                                              }
                                             }}
                                             className="text-xs px-3 py-1 border rounded hover:bg-gray-50"
                                           >
@@ -439,8 +466,21 @@ export default function AdminDashboard() {
                                           </button>
                                           <button
                                             onClick={async () => {
-                                              await updateTherapist(t.id, { available: !therapist.available });
-                                              refetchTherapists();
+                                              try {
+                                                await updateTherapist(t.id, { available: !therapist.available });
+                                                refetchTherapists();
+                                                const status = !therapist.available ? 'online 🟢' : 'offline 🔴';
+                                                setFeedbackMessage({
+                                                  type: 'success',
+                                                  text: `${therapist.name} is now ${status}`
+                                                });
+                                                setTimeout(() => setFeedbackMessage(null), 3000);
+                                              } catch (err) {
+                                                setFeedbackMessage({
+                                                  type: 'error',
+                                                  text: 'Failed to update availability'
+                                                });
+                                              }
                                             }}
                                             className={`text-xs px-3 py-1 border rounded text-white ${therapist.available ? 'bg-red-500 hover:bg-red-600 border-red-600' : 'bg-green-500 hover:bg-green-600 border-green-600'}`}
                                           >
