@@ -14,7 +14,8 @@ export const translations: Record<Language, any> = {
       cta: 'Book Appointment'
     },
     booking: {
-      successTitle: 'Booking Confirmed!'
+      successTitle: 'Booking Confirmed!',
+      cancellationPolicy: 'Free cancellation up to 3 hours before appointment. Late cancellations may incur a fee.'
     },
     footer: {
       about: 'Premium mobile massage service on Koh Phangan. We bring relaxation to your doorstep.',
@@ -33,7 +34,8 @@ export const translations: Record<Language, any> = {
       cta: 'Termin Buchen'
     },
     booking: {
-      successTitle: 'Buchung Bestätigt!'
+      successTitle: 'Buchung Bestätigt!',
+      cancellationPolicy: 'Kostenlose Stornierung bis 3 Stunden vor Termin. Bei späteren Absagen kann eine Gebühr anfallen.'
     },
     footer: {
       about: 'Premium mobiler Massage-Service auf Koh Phangan. Wir bringen Entspannung direkt zu Ihnen.',
@@ -52,7 +54,8 @@ export const translations: Record<Language, any> = {
       cta: 'จองนัดหมาย'
     },
     booking: {
-      successTitle: 'ยืนยันการจองแล้ว!'
+      successTitle: 'ยืนยันการจองแล้ว!',
+      cancellationPolicy: 'ยกเลิกฟรีล่วงหน้า 3 ชั่วโมงก่อนเวลานัดหมาย'
     },
     footer: {
       about: 'บริการนวดเคลื่อนที่พรีเมียมบนเกาะพะงัน ผ่อนคลายถึงที่พักของคุณ',
@@ -71,7 +74,8 @@ export const translations: Record<Language, any> = {
       cta: 'Réserver'
     },
     booking: {
-      successTitle: 'Réservation confirmée!'
+      successTitle: 'Réservation confirmée!',
+      cancellationPolicy: 'Annulation gratuite jusqu\'à 3 heures avant le rendez-vous.'
     },
     footer: {
       about: 'Service de massage mobile premium à Koh Phangan. Nous apportons la relaxation à votre porte.',
@@ -90,7 +94,8 @@ export const translations: Record<Language, any> = {
       cta: 'Reservar Cita'
     },
     booking: {
-      successTitle: '¡Reserva Confirmada!'
+      successTitle: '¡Reserva Confirmada!',
+      cancellationPolicy: 'Cancelación gratuita hasta 3 horas antes de la cita.'
     },
     footer: {
       about: 'Servicio de masaje móvil premium en Koh Phangan. Llevamos la relajación a su puerta.',
@@ -109,7 +114,8 @@ export const translations: Record<Language, any> = {
       cta: '预约'
     },
     booking: {
-      successTitle: '预订已确认！'
+      successTitle: '预订已确认！',
+      cancellationPolicy: '预约前3小时可免费取消。'
     },
     footer: {
       about: '帕岸岛高级上门按摩服务。我们将放松带到您家门口。',
@@ -128,7 +134,8 @@ export const translations: Record<Language, any> = {
       cta: 'अपॉइंटमेंट बुक करें'
     },
     booking: {
-      successTitle: 'बुकिंग की पुष्टि हो गई!'
+      successTitle: 'बुकिंग की पुष्टि हो गई!',
+      cancellationPolicy: 'अपॉइंटमेंट से 3 घंटे पहले तक मुफ्त रद्दीकरण।'
     },
     footer: {
       about: 'कोह फगन पर प्रीमियम मोबाइल मालिश सेवा। हम आपके दरवाजे पर विश्राम लाते हैं।',
@@ -147,7 +154,8 @@ export const translations: Record<Language, any> = {
       cta: 'احجز موعداً'
     },
     booking: {
-      successTitle: 'تم تأكيد الحجز!'
+      successTitle: 'تم تأكيد الحجز!',
+      cancellationPolicy: 'إلغاء مجاني حتى 3 ساعات قبل الموعد.'
     },
     footer: {
       about: 'خدمة تدليك متنقلة متميزة في كوه فانغان. نجلب الاسترخاء إلى عتبة داركم.',

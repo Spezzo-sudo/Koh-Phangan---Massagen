@@ -1,8 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, PropsWithChildren } from 'react';
-import { User, Language, Booking, CreateBookingInput } from './types';
+import { User, Language, Booking, CreateBookingInput, CartItem, Product } from './types';
 import { translations } from './translations';
 import { MOCK_BOOKINGS } from './constants';
+import { supabase } from './lib/supabase';
 
 // --- Auth Context ---
 interface AuthContextType {
@@ -17,8 +18,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: PropsWithChildren<{}>) {
   const [user, setUser] = useState<User | null>(null);
 
+  // SUPABASE PREPARATION:
+  // useEffect(() => {
+  //   supabase?.auth.getSession().then(({ data: { session } }) => {
+  //      if (session) setUser(transformSupabaseUser(session.user));
+  //   });
+  //   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  //      setUser(session ? transformSupabaseUser(session.user) : null);
+  //   });
+  //   return () => subscription.unsubscribe();
+  // }, []);
+
   const login = (role: 'customer' | 'therapist') => {
-    // Simulating a login response
+    // SUPABASE TODO: supabase.auth.signInWithPassword(...)
+    
+    // Mock Logic:
     if (role === 'customer') {
       setUser({
         id: 'c1',
@@ -37,6 +51,7 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
   };
 
   const logout = () => {
+    // SUPABASE TODO: supabase.auth.signOut()
     setUser(null);
   };
 
@@ -105,14 +120,49 @@ interface DataContextType {
   bookings: Booking[];
   addBooking: (booking: CreateBookingInput) => void;
   updateBookingStatus: (id: string, status: Booking['status']) => void;
+  // Cart
+  cart: CartItem[];
+  addToCart: (product: Product) => void;
+  removeFromCart: (productId: string) => void;
+  updateCartQuantity: (productId: string, delta: number) => void;
+  clearCart: () => void;
+  cartTotal: number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: PropsWithChildren<{}>) {
   const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  const addBooking = (input: CreateBookingInput) => {
+  // SUPABASE TODO: Fetch bookings on mount
+  /*
+  useEffect(() => {
+    if (!supabase) return;
+    const fetchBookings = async () => {
+        const { data } = await supabase.from('bookings').select('*');
+        if (data) setBookings(data);
+    };
+    fetchBookings();
+    
+    // Realtime subscription
+    const subscription = supabase
+        .channel('public:bookings')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+            // handle insert/update/delete
+            console.log('Realtime update:', payload);
+        })
+        .subscribe();
+        
+    return () => { supabase.removeChannel(subscription); }
+  }, []);
+  */
+
+  const addBooking = async (input: CreateBookingInput) => {
+    // SUPABASE TODO: 
+    // const { data, error } = await supabase.from('bookings').insert([{ ...input, status: 'pending' }]).select();
+
+    // Mock Logic:
     const newBooking: Booking = {
       ...input,
       id: `b${Date.now()}`, // Generate a random ID
@@ -121,12 +171,57 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
     setBookings(prev => [newBooking, ...prev]);
   };
 
-  const updateBookingStatus = (id: string, status: Booking['status']) => {
+  const updateBookingStatus = async (id: string, status: Booking['status']) => {
+    // SUPABASE TODO:
+    // await supabase.from('bookings').update({ status }).eq('id', id);
+
+    // Mock Logic:
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
   };
 
+  // Cart Logic (Local Only usually, unless syncing across devices)
+  const addToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => 
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+  };
+
+  const removeFromCart = (productId: string) => {
+    setCart(prev => prev.filter(item => item.id !== productId));
+  };
+
+  const updateCartQuantity = (productId: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === productId) {
+        const newQuantity = Math.max(0, item.quantity + delta);
+        return { ...item, quantity: newQuantity };
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
+  };
+
+  const clearCart = () => setCart([]);
+
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
   return (
-    <DataContext.Provider value={{ bookings, addBooking, updateBookingStatus }}>
+    <DataContext.Provider value={{ 
+      bookings, 
+      addBooking, 
+      updateBookingStatus,
+      cart,
+      addToCart,
+      removeFromCart,
+      updateCartQuantity,
+      clearCart,
+      cartTotal
+    }}>
       {children}
     </DataContext.Provider>
   );

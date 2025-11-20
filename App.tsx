@@ -9,15 +9,17 @@ import ShopPage from './pages/ShopPage';
 import LoginPage from './pages/LoginPage';
 import TherapistDashboard from './pages/TherapistDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
-import { AuthProvider, LanguageProvider, DataProvider, useAuth, useLanguage } from './contexts';
+import { AuthProvider, LanguageProvider, DataProvider, useAuth, useLanguage, useData } from './contexts';
 import { Language } from './types';
 
 const Navbar = () => {
   const location = useLocation();
   const { user, logout, isAuthenticated } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { cart } = useData();
   
   const isActive = (path: string) => location.pathname === path ? 'text-brand-teal' : 'text-gray-500 hover:text-brand-teal';
+  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const languages: {code: Language, label: string}[] = [
     { code: 'en', label: '🇺🇸' },
@@ -49,8 +51,13 @@ const Navbar = () => {
           <UserIcon size={20} />
           <span className="text-xs font-medium">{t('nav.team')}</span>
         </Link>
-        <Link to="/shop" className={`flex flex-col items-center gap-1 ${isActive('/shop')}`}>
+        <Link to="/shop" className={`relative flex flex-col items-center gap-1 ${isActive('/shop')}`}>
           <ShoppingBag size={20} />
+          {cartCount > 0 && (
+            <span className="absolute -top-1 right-2 bg-brand-gold text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold animate-pulse">
+              {cartCount}
+            </span>
+          )}
           <span className="text-xs font-medium">{t('nav.shop')}</span>
         </Link>
         
