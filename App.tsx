@@ -1,6 +1,6 @@
 
 import React, { Suspense, lazy } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Menu, ShoppingBag, Calendar, User as UserIcon, MapPin, LogIn, LogOut, Globe, Shield, Lock } from 'lucide-react';
 import LegalFooter from './components/LegalFooter';
 import { AuthProvider, LanguageProvider, DataProvider, useAuth, useLanguage, useData } from './contexts';
@@ -182,7 +182,7 @@ export default function App() {
         <AuthProvider>
             <LanguageProvider>
                 <DataProvider>
-                    <HashRouter>
+                    <BrowserRouter>
                         <div className="min-h-screen flex flex-col font-sans">
                             <Navbar />
                             <main className="flex-grow md:pt-16 pb-20 md:pb-0">
@@ -205,7 +205,7 @@ export default function App() {
                             </main>
                             <Footer />
                         </div>
-                    </HashRouter>
+                    </BrowserRouter>
                 </DataProvider>
             </LanguageProvider>
         </AuthProvider>

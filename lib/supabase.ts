@@ -1,31 +1,20 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types';
 
-// SICHERE VARIANTE: Zugriff auf Environment Variables
-const getEnv = (key: string) => {
-  // Prüfen ob import.meta existiert und ob env existiert
-  const env = (import.meta as any)?.env || {};
-  return env[key];
-};
+// Standard Vite Environment Access
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabaseUrl = getEnv('VITE_SUPABASE_URL');
-const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
-
-// Wir prüfen, ob die Keys existieren, um Abstürze zu vermeiden.
-// Falls sie fehlen, ist supabase null und die App nutzt die Mock-Daten (siehe contexts.tsx).
+// Wir prüfen, ob die Keys existieren.
+// Falls sie fehlen (z.B. noch nicht in .env eingetragen), ist supabase null.
 export const supabase = (supabaseUrl && supabaseAnonKey) 
   ? createClient<Database>(supabaseUrl, supabaseAnonKey) 
   : null;
 
 /**
- * ANLEITUNG ZUR SICHERHEIT:
+ * ANLEITUNG:
+ * Erstelle eine Datei namens .env im Hauptverzeichnis und füge deine Keys hinzu:
  * 
- * 1. Der 'supabaseAnonKey' ist zwar im Browser sichtbar, aber das ist okay.
- *    Sicherheit entsteht durch "Row Level Security" (RLS) in der Datenbank selbst.
- *    
- * 2. Gehe in Supabase -> Authentication -> Policies
- *    Erstelle Regeln wie: "Users can only view their own bookings."
- *    
- * 3. NIEMALS den 'service_role' Key hier verwenden! Nur den 'anon' Key.
+ * VITE_SUPABASE_URL=https://dein-projekt.supabase.co
+ * VITE_SUPABASE_ANON_KEY=dein-key
  */
