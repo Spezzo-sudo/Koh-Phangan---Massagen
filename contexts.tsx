@@ -9,62 +9,123 @@ import { sendBookingNotifications } from './lib/mockEmail';
 // --- Auth Context ---
 interface AuthContextType {
   user: User | null;
-  login: (role: 'customer' | 'therapist' | 'admin') => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata: { fullName: string; role: string }) => Promise<void>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren<{}>) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
-  // SUPABASE PREPARATION:
-  // useEffect(() => {
-  //   supabase?.auth.getSession().then(({ data: { session } }) => {
-  //      if (session) setUser(transformSupabaseUser(session.user));
-  //   });
-  //   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-  //      setUser(session ? transformSupabaseUser(session.user) : null);
-  //   });
-  //   return () => subscription.unsubscribe();
-  // }, []);
+  // SUPABASE: Initialize auth state on mount
+  useEffect(() => {
+    if (!supabase) {
+      setIsLoadingAuth(false);
+      return;
+    }
 
-  const login = (role: 'customer' | 'therapist' | 'admin') => {
-    // SUPABASE TODO: supabase.auth.signInWithPassword(...)
-    
-    // Mock Logic:
-    if (role === 'customer') {
-      setUser({
-        id: 'c1',
-        role: 'customer',
-        name: 'Max Mustermann',
-        email: 'max@example.com'
-      });
-    } else if (role === 'therapist') {
-      setUser({
-        id: 't1', // Simulating we are Ms. Ang (id: t1 in constants)
-        role: 'therapist',
-        name: 'Ms. Ang',
-        email: 'ang@phanganserenity.com'
-      });
-    } else if (role === 'admin') {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
         setUser({
-            id: 'admin1',
-            role: 'admin',
-            name: 'Boss',
-            email: 'admin@phanganserenity.com'
+          id: session.user.id,
+          role: (session.user.user_metadata?.role || 'customer') as any,
+          name: session.user.user_metadata?.full_name || session.user.email || 'User',
+          email: session.user.email || '',
+          avatar_url: session.user.user_metadata?.avatar_url
         });
+      }
+      setIsLoadingAuth(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          role: (session.user.user_metadata?.role || 'customer') as any,
+          name: session.user.user_metadata?.full_name || session.user.email || 'User',
+          email: session.user.email || '',
+          avatar_url: session.user.user_metadata?.avatar_url
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    if (!supabase) throw new Error('Supabase not configured');
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
+
+    if (data.user) {
+      setUser({
+        id: data.user.id,
+        role: (data.user.user_metadata?.role || 'customer') as any,
+        name: data.user.user_metadata?.full_name || data.user.email || 'User',
+        email: data.user.email || '',
+        avatar_url: data.user.user_metadata?.avatar_url
+      });
     }
   };
 
-  const logout = () => {
-    // SUPABASE TODO: supabase.auth.signOut()
+  const signUp = async (
+    email: string,
+    password: string,
+    metadata: { fullName: string; role: string }
+  ) => {
+    if (!supabase) throw new Error('Supabase not configured');
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: metadata.fullName,
+          role: metadata.role
+        }
+      }
+    });
+
+    if (error) throw error;
+
+    // Create profile entry for the user
+    if (data.user) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          role: metadata.role,
+          full_name: metadata.fullName
+        });
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.warn('Profile creation warning:', profileError);
+      }
+    }
+  };
+
+  const logout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, signUp, logout, isAuthenticated: !!user, isLoading: isLoadingAuth }}>
       {children}
     </AuthContext.Provider>
   );
@@ -233,36 +294,59 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
   const addBooking = async (input: CreateBookingInput) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
         // CRITICAL: Double-Check Availability before saving
-        // This prevents race conditions in a real DB scenario (mostly)
         const isAvailable = checkAvailability(input.therapistId, input.date, input.time, input.duration);
         if (!isAvailable) {
             throw new Error("Slot no longer available. Please choose another time.");
         }
 
-        // Simulate API Call Latency (Database)
-        await delay(800); 
-
         const newBooking: Booking = {
           ...input,
-          id: `b${Date.now()}`, // Generate a random ID
+          id: `b${Date.now()}`,
           status: 'pending'
         };
-        
-        // 1. Save to "Database"
+
+        // Try Supabase first, fallback to mock
+        if (supabase) {
+          try {
+            const { data, error: dbError } = await supabase
+              .from('bookings')
+              .insert([{
+                customer_id: input.customerName, // TODO: Use actual user ID when Auth is ready
+                therapist_id: input.therapistId,
+                service_id: input.serviceId,
+                scheduled_date: input.date,
+                scheduled_time: input.time,
+                duration: input.duration,
+                status: 'pending',
+                location_text: input.location,
+                gps_lat: input.coordinates?.lat || null,
+                gps_lng: input.coordinates?.lng || null,
+                total_price: input.totalPrice,
+                notes: input.notes || null,
+                addons: input.addons || []
+              }])
+              .select();
+
+            if (dbError) throw dbError;
+            console.log("Booking saved to Supabase:", data);
+          } catch (dbErr) {
+            console.warn("Supabase save failed, falling back to mock:", dbErr);
+          }
+        }
+
+        // 1. Save to local state (mock)
         setBookings(prev => [newBooking, ...prev]);
 
         // 2. Trigger Mock Email Service
-        // Note: We don't await this necessarily in a real app (fire and forget), 
-        // but here we do to simulate the full processing time
         await sendBookingNotifications(newBooking);
 
     } catch (e: any) {
         console.error("Booking Error:", e);
         setError(e.message || "Failed to create booking.");
-        throw e; 
+        throw e;
     } finally {
         setIsLoading(false);
     }
@@ -271,8 +355,22 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
   const updateBookingStatus = async (id: string, status: Booking['status']) => {
     setIsLoading(true);
     try {
-        // Simulate API Call
-        await delay(500);
+        // Try Supabase first, fallback to mock
+        if (supabase) {
+          try {
+            const { error: dbError } = await supabase
+              .from('bookings')
+              .update({ status })
+              .eq('id', id);
+
+            if (dbError) throw dbError;
+            console.log("Booking status updated in Supabase:", id, status);
+          } catch (dbErr) {
+            console.warn("Supabase update failed, falling back to mock:", dbErr);
+          }
+        }
+
+        // Update local state
         setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
     } catch (e: any) {
         setError("Failed to update status.");
