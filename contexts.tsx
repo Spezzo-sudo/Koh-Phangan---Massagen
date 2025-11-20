@@ -30,18 +30,29 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
     }
 
     const fetchUserProfile = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
-      return data || null;
+        if (error) {
+          console.warn('⚠️ Profile not found for user:', userId, error.message);
+          return null;
+        }
+        return data || null;
+      } catch (err) {
+        console.error('❌ Error fetching profile:', err);
+        return null;
+      }
     };
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const profile = await fetchUserProfile(session.user.id);
+
+        // Set user even if profile doesn't exist yet (trigger might still be creating it)
         setUser({
           id: session.user.id,
           role: (profile?.role || 'customer') as any,
@@ -56,6 +67,7 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         fetchUserProfile(session.user.id).then((profile) => {
+          // Always set user, even if profile is null
           setUser({
             id: session.user.id,
             role: (profile?.role || 'customer') as any,
