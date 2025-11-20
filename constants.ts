@@ -347,7 +347,8 @@ export const MOCK_EXPENSES: Expense[] = [
         amount: 1200,
         date: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
         category: 'supplies',
-        type: 'expense'
+        type: 'expense',
+        attachmentUrl: 'https://picsum.photos/200/300' // Mock receipt
     },
     {
         id: 'e2',

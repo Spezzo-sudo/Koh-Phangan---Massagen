@@ -1,16 +1,28 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData, useLanguage, useAuth } from '../contexts';
-import { TrendingUp, TrendingDown, DollarSign, Calendar, Plus, ShoppingBag, User, Lock, Users, CheckCircle, XCircle, Power } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Plus, ShoppingBag, User, Lock, Users, CheckCircle, Power, X, Save, Paperclip, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { Expense } from '../types';
 
 export default function AdminDashboard() {
-  const { bookings, expenses, therapists, updateTherapist } = useData();
+  const { bookings, expenses, therapists, updateTherapist, addExpense, isLoading } = useData();
   const { user, isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState<'today' | 'month' | 'year'>('month');
   const [activeTab, setActiveTab] = useState<'financial' | 'team'>('financial');
+
+  // --- ADD EXPENSE MODAL STATE ---
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+      title: '',
+      amount: '',
+      category: 'other' as Expense['category']
+  });
+  // State for the file attachment
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   // --- SECURITY GUARD ---
   useEffect(() => {
@@ -65,7 +77,8 @@ export default function AdminDashboard() {
           title: `Booking: ${b.customerName}`,
           amount: b.totalPrice,
           type: 'income',
-          status: b.status
+          status: b.status,
+          attachment: null
       })),
       ...filteredData.expenses.map(e => ({
           id: e.id,
@@ -73,7 +86,8 @@ export default function AdminDashboard() {
           title: e.title,
           amount: e.amount,
           type: 'expense',
-          status: e.category
+          status: e.category,
+          attachment: e.attachmentUrl
       }))
   ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
@@ -82,8 +96,34 @@ export default function AdminDashboard() {
   const revPercent = (totalRevenue / maxVal) * 100;
   const expPercent = (totalExpenses / maxVal) * 100;
 
+  // --- Handlers ---
+  const handleExpenseSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!expenseForm.title || !expenseForm.amount) return;
+
+      // Simulate File Upload (Create Local URL)
+      // In a real app, this would upload to Supabase Storage and return a remote URL
+      let attachmentUrl = undefined;
+      if (receiptFile) {
+          attachmentUrl = URL.createObjectURL(receiptFile);
+      }
+
+      await addExpense({
+          title: expenseForm.title,
+          amount: parseFloat(expenseForm.amount),
+          category: expenseForm.category,
+          date: new Date().toISOString(),
+          attachmentUrl
+      });
+
+      // Reset & Close
+      setExpenseForm({ title: '', amount: '', category: 'other' });
+      setReceiptFile(null);
+      setShowExpenseModal(false);
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 bg-gray-50 min-h-screen">
+    <div className="max-w-6xl mx-auto px-4 py-8 bg-gray-50 min-h-screen relative">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
@@ -227,7 +267,10 @@ export default function AdminDashboard() {
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-gray-800">Recent Transactions</h3>
-                    <button className="text-sm text-brand-teal font-medium hover:underline flex items-center gap-1">
+                    <button 
+                        onClick={() => setShowExpenseModal(true)}
+                        className="text-sm text-brand-teal font-medium hover:underline flex items-center gap-1"
+                    >
                         <Plus size={14} /> Add Expense
                     </button>
                 </div>
@@ -239,13 +282,14 @@ export default function AdminDashboard() {
                                 <th className="px-4 py-3 text-left rounded-l-lg">Date</th>
                                 <th className="px-4 py-3 text-left">Description</th>
                                 <th className="px-4 py-3 text-center">Category</th>
+                                <th className="px-4 py-3 text-center">Receipt</th>
                                 <th className="px-4 py-3 text-right rounded-r-lg">Amount</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {transactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="text-center py-8 text-gray-400">No transactions found for this period.</td>
+                                    <td colSpan={5} className="text-center py-8 text-gray-400">No transactions found for this period.</td>
                                 </tr>
                             ) : (
                                 transactions.map((tx) => (
@@ -271,6 +315,21 @@ export default function AdminDashboard() {
                                             }`}>
                                                 {tx.status}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {tx.attachment ? (
+                                                <a 
+                                                    href={tx.attachment} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-brand-teal hover:text-white transition-colors text-gray-500"
+                                                    title="View Receipt"
+                                                >
+                                                    <Paperclip size={14} />
+                                                </a>
+                                            ) : (
+                                                <span className="text-gray-300">-</span>
+                                            )}
                                         </td>
                                         <td className={`px-4 py-3 text-right font-bold ${
                                             tx.type === 'income' ? 'text-green-600' : 'text-red-600'
@@ -360,6 +419,115 @@ export default function AdminDashboard() {
                           ))}
                       </tbody>
                   </table>
+              </div>
+          </div>
+      )}
+
+      {/* ADD EXPENSE MODAL */}
+      {showExpenseModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-serif text-xl font-bold text-brand-dark">Add New Expense</h3>
+                      <button onClick={() => setShowExpenseModal(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                          <X size={20} className="text-gray-500" />
+                      </button>
+                  </div>
+                  
+                  <form onSubmit={handleExpenseSubmit} className="space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                          <input 
+                              type="text" 
+                              required
+                              className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brand-teal outline-none"
+                              placeholder="e.g. Stock refill"
+                              value={expenseForm.title}
+                              onChange={e => setExpenseForm({...expenseForm, title: e.target.value})}
+                          />
+                      </div>
+                      
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Amount (THB)</label>
+                          <div className="relative">
+                            <input 
+                                type="number" 
+                                required
+                                min="0"
+                                className="w-full border border-gray-300 rounded-lg p-3 pl-10 focus:ring-2 focus:ring-brand-teal outline-none"
+                                placeholder="0.00"
+                                value={expenseForm.amount}
+                                onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
+                            />
+                            <DollarSign size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                          </div>
+                      </div>
+
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
+                          <select 
+                              className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-brand-teal outline-none bg-white"
+                              value={expenseForm.category}
+                              onChange={e => setExpenseForm({...expenseForm, category: e.target.value as any})}
+                          >
+                              <option value="other">Other</option>
+                              <option value="marketing">Marketing</option>
+                              <option value="supplies">Supplies</option>
+                              <option value="salary">Salary</option>
+                              <option value="commission">Commission</option>
+                          </select>
+                      </div>
+
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Attach Receipt</label>
+                          <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
+                              <input 
+                                type="file" 
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                accept="image/*,.pdf"
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                        setReceiptFile(e.target.files[0]);
+                                    }
+                                }}
+                              />
+                              <div className="flex flex-col items-center gap-2 text-gray-500">
+                                  {receiptFile ? (
+                                      <>
+                                        <CheckCircle className="text-green-500" size={24} />
+                                        <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">
+                                            {receiptFile.name}
+                                        </span>
+                                        <span className="text-xs text-green-600">File selected</span>
+                                      </>
+                                  ) : (
+                                      <>
+                                        <FileText size={24} />
+                                        <span className="text-sm">Click to upload image or PDF</span>
+                                        <span className="text-xs text-gray-400">(Required for Tax deduction)</span>
+                                      </>
+                                  )}
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="pt-4 flex gap-3">
+                          <button 
+                              type="button" 
+                              onClick={() => setShowExpenseModal(false)}
+                              className="flex-1 py-3 border border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-50"
+                          >
+                              Cancel
+                          </button>
+                          <button 
+                              type="submit" 
+                              disabled={isLoading}
+                              className="flex-1 py-3 bg-brand-teal text-white rounded-lg font-bold hover:bg-brand-dark flex items-center justify-center gap-2 disabled:opacity-70"
+                          >
+                              {isLoading ? <LoadingSpinner /> : <><Save size={18} /> Save Expense</>}
+                          </button>
+                      </div>
+                  </form>
               </div>
           </div>
       )}

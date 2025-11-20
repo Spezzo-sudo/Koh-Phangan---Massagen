@@ -95,6 +95,7 @@ export interface Expense {
     date: string;
     category: 'marketing' | 'supplies' | 'salary' | 'commission' | 'other';
     type: 'expense'; // discriminator
+    attachmentUrl?: string; // URL to the uploaded receipt (Image/PDF)
 }
 
 export interface User {
