@@ -22,6 +22,7 @@ export interface Service {
   type: ServiceType;
   category: ServiceCategory; // New field for filtering
   image: string;
+  staffRequired?: number; // New: Number of staff members required (e.g. 2 for packages)
 }
 
 export interface Addon {

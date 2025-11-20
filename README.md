@@ -1,20 +1,37 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Phangan Serenity - Mobile Wellness Platform 🏝️
 
-# Run and deploy your AI Studio app
+**Status:** MVP / High-Fidelity Prototype (Mock Data)
 
-This contains everything you need to run your app locally.
+This is a React-based Single Page Application (SPA) for booking mobile massage and beauty services on Koh Phangan, Thailand. 
+It functions like "Uber for Massages" - therapists travel to the customer's location.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1eFsXi2wOniZvBdsnDjfENbDXOFE8fBJf
+## 🤖 For AI Agents & Developers
 
-## Run Locally
+If you are an AI Coding Agent (Claude, Cursor, Windsurf, etc.) or a new developer joining the project, **please read these files in order before writing code:**
 
-**Prerequisites:**  Node.js
+1.  **`AGENTS.md`** - **START HERE.** The "Brain" of the project. Business logic, architectural decisions, and domain context.
+2.  **`.cursorrules`** - Coding standards, UI guidelines, and restricted files.
+3.  **`TODO_NEXT.md`** - The immediate roadmap for migrating from Mock Data to Live Data.
+4.  **`TECH_SPEC.md`** - Database schema (SQL) and technical configuration details.
 
+## 🚀 Quick Start
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1.  Install dependencies: `npm install`
+2.  Start development server: `npm run dev`
+3.  The app will run in "Mock Mode" by default (no API keys required).
+
+## 🛠️ Tech Stack
+
+*   **Frontend:** React 18, Vite, TypeScript
+*   **Styling:** Tailwind CSS (Mobile First)
+*   **Icons:** Lucide React
+*   **State:** React Context API (`DataContext`, `AuthContext`)
+*   **Backend (Planned):** Supabase (PostgreSQL + Auth)
+*   **Maps (Planned):** Google Maps Platform (Places API)
+
+## ⚠️ Crucial Architecture Note
+
+The application currently uses a **Service Layer Pattern** to abstract data sources.
+*   `constants.ts` contains Mock Data.
+*   `lib/supabase.ts` and `hooks/usePlacesAutocomplete.ts` are the bridge to real data.
+*   **DO NOT** delete the mock data until the backend connection is fully verified.

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand, Crosshair, Users } from 'lucide-react';
 import { SERVICES, THERAPISTS, TIME_SLOTS, BOOKING_ADDONS } from '../constants';
 import { useAuth, useLanguage, useData } from '../contexts';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
@@ -46,6 +46,9 @@ export default function BookingPage() {
       notes: '', 
       address: '' 
   });
+
+  // Location State
+  const [isLocating, setIsLocating] = useState(false);
 
   // Update name if user logs in mid-flow
   useEffect(() => {
@@ -94,6 +97,9 @@ export default function BookingPage() {
   const selectedService = SERVICES.find(s => s.id === selectedServiceId);
   const selectedTherapist = THERAPISTS.find(t => t.id === selectedTherapistId);
   const dates = getNextDays(5);
+  
+  // Check if multiple staff are required
+  const requiresMultiStaff = selectedService?.staffRequired && selectedService.staffRequired > 1;
 
   // Calculate Total Price
   const basePrice = duration === 60 ? selectedService?.price60 || 0 : selectedService?.price90 || 0;
@@ -103,12 +109,51 @@ export default function BookingPage() {
   }, 0);
   const totalPrice = basePrice + addonsPrice;
 
+  // Time Slot Logic (Disable past times)
+  const availableTimeSlots = useMemo(() => {
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    
+    if (!isToday) return TIME_SLOTS;
+
+    const currentHour = now.getHours();
+    return TIME_SLOTS.filter(time => {
+        const [hour] = time.split(':').map(Number);
+        return hour > currentHour + 1; // Allow booking at least 1 hour in advance
+    });
+  }, [selectedDate]);
+
   const toggleAddon = (id: string) => {
       if (selectedAddons.includes(id)) {
           setSelectedAddons(prev => prev.filter(a => a !== id));
       } else {
           setSelectedAddons(prev => [...prev, id]);
       }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const { latitude, longitude } = position.coords;
+            // In a real app, use Reverse Geocoding API here.
+            // For MVP, we put coords in text.
+            setCustomerDetails(prev => ({
+                ...prev,
+                address: `📍 GPS Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+            }));
+            setIsLocating(false);
+        },
+        (error) => {
+            console.error(error);
+            alert('Unable to retrieve your location');
+            setIsLocating(false);
+        }
+    );
   };
 
   const handleBookingSubmit = (e: React.FormEvent) => {
@@ -201,7 +246,7 @@ export default function BookingPage() {
         <p className="text-gray-600 mb-6 max-w-md">
           Khop Khun Ka, {customerDetails.name}! <br/>
           <span className="block mt-2">
-            <strong>{selectedTherapist?.name}</strong> will come to: <br/>
+            <strong>{selectedTherapist?.name} {requiresMultiStaff ? '& Partner' : ''}</strong> will come to: <br/>
             <span className="text-brand-teal">{customerDetails.address}</span>
           </span>
           <span className="block mt-2 text-sm">
@@ -289,7 +334,14 @@ export default function BookingPage() {
                     onClick={() => { setSelectedServiceId(service.id); setStep(1); }}
                     className="flex items-center p-4 border border-gray-200 rounded-xl hover:border-brand-teal hover:bg-brand-light/20 transition-all text-left group bg-white shadow-sm"
                     >
-                    <img src={service.image} alt={service.title} className="w-24 h-24 rounded-lg object-cover mr-4" />
+                    <div className="relative mr-4">
+                        <img src={service.image} alt={service.title} className="w-24 h-24 rounded-lg object-cover" />
+                        {service.staffRequired && service.staffRequired > 1 && (
+                             <div className="absolute bottom-0 left-0 right-0 bg-purple-600/90 text-white text-[10px] font-bold text-center py-0.5 rounded-b-lg flex items-center justify-center gap-1">
+                                 <Users size={10} /> Team of {service.staffRequired}
+                             </div>
+                        )}
+                    </div>
                     <div className="flex-1">
                         <div className="flex justify-between items-start">
                             <h3 className="font-bold text-lg group-hover:text-brand-teal">{service.title}</h3>
@@ -393,7 +445,7 @@ export default function BookingPage() {
                 return (
                   <button
                     key={date.toString()}
-                    onClick={() => setSelectedDate(date)}
+                    onClick={() => { setSelectedDate(date); setSelectedTime(null); }}
                     className={`flex-shrink-0 w-16 h-20 rounded-xl flex flex-col items-center justify-center border-2 transition-all ${
                       isSelected ? 'border-brand-teal bg-brand-teal text-white' : 'border-gray-100 bg-white'
                     }`}
@@ -408,21 +460,27 @@ export default function BookingPage() {
 
           <div>
             <h3 className="font-bold mb-4">Select Time</h3>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {TIME_SLOTS.map(time => (
-                <button
-                  key={time}
-                  onClick={() => setSelectedTime(time)}
-                  className={`py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedTime === time 
-                      ? 'bg-brand-dark text-white' 
-                      : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
+            {availableTimeSlots.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {availableTimeSlots.map(time => (
+                    <button
+                    key={time}
+                    onClick={() => setSelectedTime(time)}
+                    className={`py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedTime === time 
+                        ? 'bg-brand-dark text-white' 
+                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                    }`}
+                    >
+                    {time}
+                    </button>
+                ))}
+                </div>
+            ) : (
+                <div className="text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-gray-500">
+                    No available slots for today. Please select another date.
+                </div>
+            )}
           </div>
 
           {/* Action Button - NOW VISIBLE ON MOBILE */}
@@ -432,7 +490,7 @@ export default function BookingPage() {
               onClick={() => setStep(3)}
               className="w-full md:w-auto bg-brand-teal disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-4 rounded-full font-medium hover:bg-brand-dark transition-colors flex items-center justify-center gap-2 shadow-lg shadow-brand-teal/20"
             >
-              {selectedTime ? 'Find Therapist' : 'Select a Time'} <ChevronRight size={18} />
+              {selectedTime ? (requiresMultiStaff ? 'Find Lead Specialist' : 'Find Specialist') : 'Select a Time'} <ChevronRight size={18} />
             </button>
           </div>
         </div>
@@ -445,7 +503,15 @@ export default function BookingPage() {
             <ChevronLeft size={16} /> Back to Time
           </button>
 
-          <h3 className="font-bold text-xl mb-6">Choose your Specialist</h3>
+          <h3 className="font-bold text-xl mb-2">Choose your Specialist</h3>
+          {requiresMultiStaff && (
+              <div className="mb-6 bg-purple-50 border border-purple-100 p-3 rounded-lg flex gap-3">
+                  <Users className="text-purple-600 shrink-0" size={20} />
+                  <div className="text-sm text-purple-800">
+                      <strong>Team of {selectedService?.staffRequired}:</strong> Please select your LEAD specialist. A partner will automatically be assigned to assist.
+                  </div>
+              </div>
+          )}
           
           <div className="grid grid-cols-1 gap-4">
             {availableTherapists.length > 0 ? availableTherapists.map(therapist => (
@@ -515,7 +581,7 @@ export default function BookingPage() {
           </button>
           
           <h3 className="font-bold text-xl mb-2">Location & Details</h3>
-          <p className="text-sm text-gray-500 mb-6">Where should {selectedTherapist?.name} come to?</p>
+          <p className="text-sm text-gray-500 mb-6">Where should {selectedTherapist?.name} {requiresMultiStaff ? '& Team' : ''} come to?</p>
           
           {!isAuthenticated && (
             <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-6 flex items-center gap-3">
@@ -535,20 +601,32 @@ export default function BookingPage() {
                     <MapPin size={16} className="text-brand-teal"/> 
                     Service Location (Hotel / Villa)
                 </label>
-                <div className="relative">
-                    <input 
-                        required
-                        type="text" 
-                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none"
-                        placeholder="Search for hotel or village..."
-                        value={customerDetails.address}
-                        onChange={e => {
-                            setCustomerDetails({...customerDetails, address: e.target.value});
-                            setShowLocationSuggestions(true);
-                        }}
-                        onFocus={() => setShowLocationSuggestions(true)}
-                    />
-                    <Search size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <input 
+                            required
+                            type="text" 
+                            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none"
+                            placeholder="Search for hotel or village..."
+                            value={customerDetails.address}
+                            onChange={e => {
+                                setCustomerDetails({...customerDetails, address: e.target.value});
+                                setShowLocationSuggestions(true);
+                            }}
+                            onFocus={() => setShowLocationSuggestions(true)}
+                        />
+                        <Search size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                    </div>
+                    <button 
+                        type="button"
+                        onClick={handleUseCurrentLocation}
+                        disabled={isLocating}
+                        className="px-3 bg-gray-100 rounded-lg text-gray-600 hover:bg-brand-light hover:text-brand-teal transition-colors"
+                        title="Use my current location"
+                    >
+                        {isLocating ? <span className="animate-spin">⏳</span> : <Crosshair size={20} />}
+                    </button>
                 </div>
 
                 {/* Autocomplete Dropdown (Uses Hook Data) */}

@@ -9,6 +9,9 @@ import ShopPage from './pages/ShopPage';
 import LoginPage from './pages/LoginPage';
 import TherapistDashboard from './pages/TherapistDashboard';
 import CustomerDashboard from './pages/CustomerDashboard';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
+import LegalFooter from './components/LegalFooter';
 import { AuthProvider, LanguageProvider, DataProvider, useAuth, useLanguage, useData } from './contexts';
 import { Language } from './types';
 
@@ -119,8 +122,8 @@ const Navbar = () => {
 const Footer = () => {
     const { t } = useLanguage();
     return (
-        <footer className="bg-brand-dark text-brand-light py-12 pb-24 md:pb-12">
-            <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <footer className="bg-brand-dark text-brand-light pt-12">
+            <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 pb-12">
             <div>
                 <h3 className="font-serif text-2xl font-bold mb-4">Phangan Serenity</h3>
                 <p className="opacity-80 text-sm leading-relaxed">
@@ -139,6 +142,7 @@ const Footer = () => {
                 <p className="opacity-80 text-sm mt-4 text-brand-gold font-medium">Book Online 24/7</p>
             </div>
             </div>
+            <LegalFooter />
         </footer>
     );
 };
@@ -160,6 +164,8 @@ export default function App() {
                             <Route path="/login" element={<LoginPage />} />
                             <Route path="/therapist/dashboard" element={<TherapistDashboard />} />
                             <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+                            <Route path="/privacy" element={<PrivacyPage />} />
+                            <Route path="/terms" element={<TermsPage />} />
                         </Routes>
                         </main>
                         <Footer />

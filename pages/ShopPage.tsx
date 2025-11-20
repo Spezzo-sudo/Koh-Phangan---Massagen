@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { PRODUCTS } from '../constants';
-import { ShoppingBag, Plus, X, Minus, Trash2, ShoppingCart, CheckCircle } from 'lucide-react';
+import { ShoppingBag, Plus, X, Minus, Trash2, ShoppingCart, CheckCircle, Truck, AlertCircle } from 'lucide-react';
 import { useData, useAuth } from '../contexts';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,7 +14,7 @@ export default function ShopPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'processing' | 'success'>('idle');
 
-  const categories = ['All', 'Oils', 'Balms', 'Aroma'];
+  const categories = ['All', 'Oils', 'Balms', 'Aroma', 'Nail Polish', 'Makeup'];
 
   const filteredProducts = selectedCategory === 'All' 
     ? PRODUCTS 
@@ -38,18 +38,31 @@ export default function ShopPage() {
       setTimeout(() => {
         setCheckoutStatus('idle');
         setIsCartOpen(false);
-      }, 3000);
+      }, 5000);
     }, 2000);
   };
 
   return (
     <div className="relative max-w-6xl mx-auto px-4 py-12 min-h-screen">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-end mb-12 border-b border-gray-200 pb-8">
+      {/* Delivery Notice Banner */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-8 flex items-start gap-3">
+        <div className="bg-blue-100 p-2 rounded-full text-blue-600 mt-1">
+            <Truck size={20} />
+        </div>
         <div>
-          <h1 className="font-serif text-4xl font-bold text-brand-dark mb-2">Wellness Shop</h1>
-          <p className="text-gray-600">Authentic oils and balms, delivered to your room.</p>
+            <h3 className="font-bold text-blue-900">Delivery by Specialist</h3>
+            <p className="text-sm text-blue-800 mt-1">
+                We do not ship items by post. Your ordered products will be <strong>brought to you by your therapist/artist</strong> during your next appointment. No extra delivery fees!
+            </p>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-gray-200 pb-8">
+        <div>
+          <h1 className="font-serif text-4xl font-bold text-brand-dark mb-2">Wellness & Beauty Shop</h1>
+          <p className="text-gray-600">Authentic oils, balms, and beauty products.</p>
         </div>
         
         <div className="flex items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
@@ -145,7 +158,7 @@ export default function ShopPage() {
                 <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center">
                   <ShoppingBag size={64} strokeWidth={1} className="mb-4 opacity-20" />
                   <p className="text-lg font-medium text-gray-500">Your cart is empty</p>
-                  <p className="text-sm max-w-xs mt-2">Looks like you haven't added any wellness products yet.</p>
+                  <p className="text-sm max-w-xs mt-2">Browse our oils, balms, and beauty products.</p>
                   <button 
                     onClick={() => setIsCartOpen(false)}
                     className="mt-6 px-6 py-2 border border-brand-teal text-brand-teal rounded-full hover:bg-brand-teal hover:text-white transition-colors"
@@ -155,15 +168,34 @@ export default function ShopPage() {
                 </div>
               ) : (
                  checkoutStatus === 'success' ? (
-                   <div className="h-full flex flex-col items-center justify-center text-center animate-fade-in">
+                   <div className="h-full flex flex-col items-center justify-center text-center animate-fade-in px-6">
                       <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
                         <CheckCircle size={40} />
                       </div>
-                      <h3 className="font-bold text-2xl text-brand-dark mb-2">Order Placed!</h3>
-                      <p className="text-gray-600">We will deliver your items to your location within 60 minutes.</p>
+                      <h3 className="font-bold text-2xl text-brand-dark mb-2">Added to Account!</h3>
+                      <p className="text-gray-600 mb-4">
+                        These items have been reserved.
+                      </p>
+                      <div className="bg-yellow-50 border border-yellow-100 p-4 rounded-lg text-sm text-yellow-800">
+                          <strong>Note:</strong> Please ensure you have an active booking. Your therapist/artist will check this list and bring the items to your next appointment.
+                      </div>
+                      <button 
+                        onClick={() => {
+                            setIsCartOpen(false);
+                            setCheckoutStatus('idle');
+                        }}
+                        className="mt-6 text-brand-teal font-medium hover:underline"
+                      >
+                        Continue Browsing
+                      </button>
                    </div>
                  ) : (
                     <div className="space-y-6">
+                        <div className="bg-blue-50 p-3 rounded-lg flex gap-2 text-xs text-blue-800">
+                            <AlertCircle size={16} className="shrink-0" />
+                            Items will be delivered by your specialist at your appointment.
+                        </div>
+
                         {cart.map(item => (
                         <div key={item.id} className="flex gap-4">
                             <img src={item.image} alt={item.name} className="w-20 h-20 rounded-lg object-cover bg-gray-50" />
@@ -206,10 +238,9 @@ export default function ShopPage() {
             {cart.length > 0 && checkoutStatus !== 'success' && (
               <div className="p-6 border-t border-gray-100 bg-gray-50">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-gray-600">Subtotal</span>
+                  <span className="text-gray-600">Total to Pay on Arrival</span>
                   <span className="font-bold text-xl text-brand-dark">{cartTotal} THB</span>
                 </div>
-                <p className="text-xs text-gray-400 mb-4 text-center">Shipping calculated at delivery (usually free)</p>
                 
                 <button 
                     onClick={handleCheckout}
@@ -217,9 +248,9 @@ export default function ShopPage() {
                     className="w-full bg-brand-dark text-white py-4 rounded-xl font-bold shadow-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                     {checkoutStatus === 'processing' ? (
-                        <>Processing Order...</>
+                        <>Saving Order...</>
                     ) : (
-                        <>Checkout Now <ShoppingBag size={18} /></>
+                        <>Confirm Items <ShoppingBag size={18} /></>
                     )}
                 </button>
               </div>

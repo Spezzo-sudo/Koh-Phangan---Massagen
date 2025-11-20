@@ -78,12 +78,13 @@ export const SERVICES: Service[] = [
   {
     id: 'pk1',
     title: 'Bridal Glow Package',
-    description: 'The full experience: Manicure, Pedicure, and a relaxing Aroma Massage.',
+    description: 'The full experience: Manicure, Pedicure, and a relaxing Aroma Massage. (Note: 2 Specialists will attend)',
     price60: 1500, // 2 Hours approx
     price90: 2500, // 3 Hours Premium
     type: ServiceType.PACKAGE,
     category: 'Packages',
-    image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&w=800&q=80',
+    staffRequired: 2 // Requires 1 Massage + 1 Nail artist
   }
 ];
 
@@ -119,7 +120,7 @@ export const THERAPISTS: Therapist[] = [
     id: 't1',
     name: 'Ms. Ang',
     image: 'https://picsum.photos/id/64/300/300',
-    skills: [ServiceType.THAI, ServiceType.FOOT],
+    skills: [ServiceType.THAI, ServiceType.FOOT, ServiceType.PACKAGE], // Added PACKAGE
     bio: 'Specialist in traditional Wat Pho style Thai massage. 15 years experience.',
     rating: 4.9,
     available: true,
@@ -132,7 +133,7 @@ export const THERAPISTS: Therapist[] = [
     id: 't2',
     name: 'Ms. Noi',
     image: 'https://picsum.photos/id/331/300/300',
-    skills: [ServiceType.THAI, ServiceType.OIL, ServiceType.DEEP_TISSUE, ServiceType.ALOE_VERA],
+    skills: [ServiceType.THAI, ServiceType.OIL, ServiceType.DEEP_TISSUE, ServiceType.ALOE_VERA, ServiceType.PACKAGE], // Added PACKAGE
     bio: 'All-rounder with strong hands for deep tissue and a gentle touch for oil massage.',
     rating: 4.8,
     available: true,
@@ -166,6 +167,20 @@ export const THERAPISTS: Therapist[] = [
     verified: true,
     reviewCount: 32,
     recentReview: "Her nail art is amazing! So precise."
+  },
+  // NEW THERAPIST TO ADD VARIETY FOR NAILS
+  {
+    id: 't5',
+    name: 'Ms. Pim',
+    image: 'https://images.unsplash.com/photo-1595239960035-78cb77234264?auto=format&fit=crop&w=300&q=80',
+    skills: [ServiceType.MANICURE, ServiceType.PEDICURE, ServiceType.NAIL_ART],
+    bio: 'Expert in Gel and Acrylic extensions. Creative designs.',
+    rating: 4.8,
+    available: true,
+    locationBase: 'Thong Sala',
+    verified: true,
+    reviewCount: 18,
+    recentReview: "Love my new nails, thank you!"
   }
 ];
 
@@ -193,6 +208,31 @@ export const PRODUCTS: Product[] = [
     price: 180,
     image: 'https://picsum.photos/id/504/400/400',
     category: 'Aroma'
+  },
+  // NEW COSMETICS
+  {
+    id: 'p4',
+    name: 'OPI Nail Polish - Phangan Red',
+    description: 'Long lasting premium nail polish in signature red.',
+    price: 350,
+    image: 'https://images.unsplash.com/photo-1632345031635-fe1822b5d8c2?auto=format&fit=crop&w=400&q=80',
+    category: 'Nail Polish'
+  },
+  {
+    id: 'p5',
+    name: 'Waterproof Mascara',
+    description: 'Perfect for humid tropical weather. Smudge-proof.',
+    price: 450,
+    image: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=400&q=80',
+    category: 'Makeup'
+  },
+  {
+    id: 'p6',
+    name: 'SPF 30 Lip Balm',
+    description: 'Protect your lips from the strong island sun.',
+    price: 150,
+    image: 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?auto=format&fit=crop&w=400&q=80',
+    category: 'Makeup'
   }
 ];
 

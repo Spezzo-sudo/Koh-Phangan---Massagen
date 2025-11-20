@@ -1,21 +1,60 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { THERAPISTS } from '../constants';
-import { Star } from 'lucide-react';
+import { ServiceType } from '../types';
+import { Star, Sparkles, Hand } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function TherapistsPage() {
+  const [activeTab, setActiveTab] = useState<'massage' | 'beauty'>('massage');
+
+  const massageTherapists = THERAPISTS.filter(t => 
+    !t.skills.includes(ServiceType.MANICURE) && !t.skills.includes(ServiceType.NAIL_ART)
+  );
+
+  const beautyArtists = THERAPISTS.filter(t => 
+    t.skills.includes(ServiceType.MANICURE) || t.skills.includes(ServiceType.NAIL_ART)
+  );
+
+  const displayedTherapists = activeTab === 'massage' ? massageTherapists : beautyArtists;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="text-center mb-16">
-        <h1 className="font-serif text-4xl font-bold text-brand-dark mb-4">Meet Our Team</h1>
+      <div className="text-center mb-12">
+        <h1 className="font-serif text-4xl font-bold text-brand-dark mb-4">Meet Our Professionals</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Our therapists are the heart of Phangan Serenity. Each has unique skills and specialties, 
-          but all share a dedication to the art of healing.
+          We have two dedicated teams: Our certified Massage Therapists for healing, and our creative Nail & Beauty Artists for your glow.
         </p>
       </div>
 
+      {/* TABS */}
+      <div className="flex justify-center mb-12">
+        <div className="bg-gray-100 p-1 rounded-full flex gap-2">
+            <button
+                onClick={() => setActiveTab('massage')}
+                className={`px-8 py-3 rounded-full font-bold transition-all flex items-center gap-2 ${
+                    activeTab === 'massage' 
+                    ? 'bg-white text-brand-dark shadow-md' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+                <Hand size={18} /> Massage Team
+            </button>
+            <button
+                onClick={() => setActiveTab('beauty')}
+                className={`px-8 py-3 rounded-full font-bold transition-all flex items-center gap-2 ${
+                    activeTab === 'beauty' 
+                    ? 'bg-white text-pink-600 shadow-md' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+                <Sparkles size={18} /> Nails & Beauty
+            </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {THERAPISTS.map(therapist => (
+        {displayedTherapists.map(therapist => (
           <div key={therapist.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 group">
             <div className="h-64 overflow-hidden relative">
               <div className="absolute inset-0 bg-brand-dark/0 group-hover:bg-brand-dark/10 transition-colors z-10"></div>
@@ -24,6 +63,11 @@ export default function TherapistsPage() {
                 alt={therapist.name} 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
+               {activeTab === 'beauty' && (
+                    <div className="absolute top-4 right-4 bg-pink-100 text-pink-600 text-xs font-bold px-3 py-1 rounded-full z-20 shadow-sm">
+                        Nail Artist
+                    </div>
+                )}
             </div>
             <div className="p-6">
               <div className="flex justify-between items-start mb-2">
@@ -48,7 +92,9 @@ export default function TherapistsPage() {
 
               <Link 
                 to={`/booking`}
-                className="block w-full text-center bg-brand-teal text-white py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+                className={`block w-full text-center text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors ${
+                    activeTab === 'beauty' ? 'bg-pink-500' : 'bg-brand-teal hover:bg-brand-dark'
+                }`}
               >
                 Book Appointment
               </Link>
