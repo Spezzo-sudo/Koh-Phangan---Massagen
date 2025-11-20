@@ -85,12 +85,22 @@ export default function LoginPage() {
       setPassword('');
       setFullName('');
 
-      // Switch to confirm-email mode
-      setMode('confirm-email');
+      // Check if we get a 400 error (which means email confirmation is required)
+      // If no error, email confirmation is disabled, so go straight to login
+      setMode('login');
       setResendSuccess('');
 
     } catch (err: any) {
-      setError(err.message || 'Signup failed. Please try again.');
+      const errorMsg = err.message || '';
+      // If error includes "Email not confirmed", show the confirm-email screen
+      if (errorMsg.includes('400') || errorMsg.includes('Email not confirmed')) {
+        setMode('confirm-email');
+        setError('');
+        setResendSuccess('');
+      } else {
+        setError(err.message || 'Signup failed. Please try again.');
+        setMode('signup');
+      }
     } finally {
       setIsLoading(false);
     }
