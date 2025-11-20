@@ -30,6 +30,7 @@ export interface Addon {
     title: string;
     price: number;
     description: string;
+    validFor?: ServiceCategory[]; // Optional: Restrict addon to specific categories
 }
 
 export interface Therapist {
@@ -44,6 +45,11 @@ export interface Therapist {
   verified?: boolean;
   reviewCount?: number;
   recentReview?: string;
+  socialHandles?: {
+      instagram?: string;
+      facebook?: string;
+      website?: string;
+  };
 }
 
 export interface Product {
@@ -78,6 +84,16 @@ export interface Booking {
 
 export type CreateBookingInput = Omit<Booking, 'id' | 'status'>;
 
+// --- NEW: EXPENSES FOR ADMIN DASHBOARD ---
+export interface Expense {
+    id: string;
+    title: string;
+    amount: number;
+    date: string;
+    category: 'marketing' | 'supplies' | 'salary' | 'commission' | 'other';
+    type: 'expense'; // discriminator
+}
+
 export interface User {
   id: string;
   role: 'customer' | 'therapist' | 'admin';
@@ -105,3 +121,22 @@ export interface DB_Booking {
 }
 
 export type Database = any;
+
+export interface DataContextType {
+  bookings: Booking[];
+  addBooking: (booking: CreateBookingInput) => Promise<void>; // Async now
+  updateBookingStatus: (id: string, status: Booking['status']) => Promise<void>; // Async now
+  // Cart
+  cart: CartItem[];
+  addToCart: (product: Product) => void;
+  removeFromCart: (productId: string) => void;
+  updateCartQuantity: (productId: string, delta: number) => void;
+  clearCart: () => void;
+  cartTotal: number;
+  // Admin / Financials
+  expenses: Expense[];
+  addExpense: (expense: Omit<Expense, 'id' | 'type'>) => Promise<void>;
+  // UI States (HARDENING Phase 0)
+  isLoading: boolean;
+  error: string | null;
+}

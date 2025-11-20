@@ -13,20 +13,24 @@ export default function TermsPage() {
         <div className="prose prose-stone mx-auto">
             <h3>1. Booking & Cancellation</h3>
             <p>
-                Appointments can be cancelled free of charge up to <strong>3 hours</strong> before the scheduled time. 
-                Cancellations made within 3 hours may be subject to a fee of 50% of the booking value on your next visit.
+                Appointments can be cancelled free of charge up to <strong>5 hours</strong> before the scheduled time. 
+            </p>
+            <p>
+                <strong>No-Show Policy:</strong> Since our therapists travel to your location, if you are not present at the agreed location and time (within 15 minutes), 
+                the appointment is considered a "No-Show". <strong>You will be liable for the full 100% payment</strong> of the booked service.
             </p>
 
             <h3>2. Payment</h3>
             <p>
-                Currently, we only accept <strong>Cash on Arrival</strong>. Please ensure you have the correct amount ready. 
-                Tips for therapists are appreciated but not mandatory.
+                Currently, we accept <strong>Cash on Arrival</strong>. Please ensure you have the correct amount ready. 
+                We are working on credit card integration for easier payments.
+                Failure to pay for a completed service or a no-show fee will result in being blacklisted from our network and potentially reported to local authorities for theft of service.
             </p>
 
-            <h3>3. Service Area</h3>
+            <h3>3. Service Area & Travel Time</h3>
             <p>
-                We cover most areas of Koh Phangan. However, some remote locations (e.g. Bottle Beach by road) may incur an additional travel surcharge. 
-                We will inform you of this before confirming the booking.
+                We require a minimum of <strong>2 hours notice</strong> for same-day bookings to allow for travel time.
+                We cover most areas of Koh Phangan. Remote locations (e.g., Bottle Beach by road) may incur an additional travel surcharge.
             </p>
 
             <h3>4. Code of Conduct</h3>

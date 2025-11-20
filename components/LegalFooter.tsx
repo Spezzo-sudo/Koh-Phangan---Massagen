@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle, X, Phone } from 'lucide-react';
 
 export default function LegalFooter() {
   const { t } = useLanguage();
@@ -31,17 +31,32 @@ export default function LegalFooter() {
         <p>&copy; {new Date().getFullYear()} Phangan Serenity. All rights reserved. Koh Phangan, Surat Thani.</p>
       </div>
 
-      {/* Floating LINE Button (Crucial for Thailand) */}
-      <a 
-        href="https://line.me/ti/p/~phangan_serenity" 
-        target="_blank" 
-        rel="noreferrer"
-        className="fixed bottom-24 right-4 z-50 bg-[#00B900] text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform flex items-center gap-2"
-        title="Chat on LINE"
-      >
-        <MessageCircle size={24} fill="white" />
-        <span className="font-bold hidden md:inline">{t('legal.chat')}</span>
-      </a>
+      {/* Floating Communication Buttons */}
+      <div className="fixed bottom-24 right-4 z-50 flex flex-col gap-3">
+          {/* WhatsApp (For Tourists) */}
+          <a 
+            href="https://wa.me/66812345678" 
+            target="_blank" 
+            rel="noreferrer"
+            className="bg-[#25D366] text-white p-3 rounded-full shadow-xl hover:scale-110 transition-transform flex items-center gap-2 justify-center"
+            title="Chat on WhatsApp"
+          >
+            <Phone size={24} fill="white" />
+            <span className="font-bold hidden md:inline">{t('legal.whatsapp')}</span>
+          </a>
+
+          {/* LINE (For Locals/Expats) */}
+          <a 
+            href="https://line.me/ti/p/~phangan_serenity" 
+            target="_blank" 
+            rel="noreferrer"
+            className="bg-[#00B900] text-white p-3 rounded-full shadow-xl hover:scale-110 transition-transform flex items-center gap-2 justify-center"
+            title="Chat on LINE"
+          >
+            <MessageCircle size={24} fill="white" />
+            <span className="font-bold hidden md:inline">{t('legal.chat')}</span>
+          </a>
+      </div>
 
       {/* Cookie Consent Banner (PDPA) */}
       {showCookieBanner && (

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /customer/dashboard/
+Disallow: /therapist/dashboard/
+
+Sitemap: https://phanganserenity.com/sitemap.xml

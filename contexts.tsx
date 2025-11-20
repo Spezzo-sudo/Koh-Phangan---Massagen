@@ -1,14 +1,13 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, PropsWithChildren } from 'react';
-import { User, Language, Booking, CreateBookingInput, CartItem, Product } from './types';
+import { User, Language, Booking, CreateBookingInput, CartItem, Product, DataContextType, Expense } from './types';
 import { translations } from './translations';
-import { MOCK_BOOKINGS } from './constants';
+import { MOCK_BOOKINGS, MOCK_EXPENSES } from './constants';
 import { supabase } from './lib/supabase';
 
 // --- Auth Context ---
 interface AuthContextType {
   user: User | null;
-  login: (role: 'customer' | 'therapist') => void;
+  login: (role: 'customer' | 'therapist' | 'admin') => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -29,7 +28,7 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
   //   return () => subscription.unsubscribe();
   // }, []);
 
-  const login = (role: 'customer' | 'therapist') => {
+  const login = (role: 'customer' | 'therapist' | 'admin') => {
     // SUPABASE TODO: supabase.auth.signInWithPassword(...)
     
     // Mock Logic:
@@ -40,13 +39,20 @@ export function AuthProvider({ children }: PropsWithChildren<{}>) {
         name: 'Max Mustermann',
         email: 'max@example.com'
       });
-    } else {
+    } else if (role === 'therapist') {
       setUser({
         id: 't1', // Simulating we are Ms. Ang (id: t1 in constants)
         role: 'therapist',
         name: 'Ms. Ang',
         email: 'ang@phanganserenity.com'
       });
+    } else if (role === 'admin') {
+        setUser({
+            id: 'admin1',
+            role: 'admin',
+            name: 'Boss',
+            email: 'admin@phanganserenity.com'
+        });
     }
   };
 
@@ -83,6 +89,13 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: PropsWithChildren<{}>) {
   const [language, setLanguage] = useState<Language>('en');
 
+  // SEO FIX: Dynamisch das HTML lang Attribut ändern
+  useEffect(() => {
+    document.documentElement.lang = language;
+    // Bei Arabisch auch die Richtung ändern
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }, [language]);
+
   const t = (key: string): string => {
     const keys = key.split('.');
     let value: any = translations[language];
@@ -116,67 +129,102 @@ export function useLanguage() {
 }
 
 // --- Data Context (The "Database" Simulation) ---
-interface DataContextType {
-  bookings: Booking[];
-  addBooking: (booking: CreateBookingInput) => void;
-  updateBookingStatus: (id: string, status: Booking['status']) => void;
-  // Cart
-  cart: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  updateCartQuantity: (productId: string, delta: number) => void;
-  clearCart: () => void;
-  cartTotal: number;
-}
-
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: PropsWithChildren<{}>) {
   const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+  const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
   const [cart, setCart] = useState<CartItem[]>([]);
+  
+  // Hardening: Loading & Error States
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Helper for simulated network delay
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // SUPABASE TODO: Fetch bookings on mount
   /*
   useEffect(() => {
     if (!supabase) return;
     const fetchBookings = async () => {
-        const { data } = await supabase.from('bookings').select('*');
-        if (data) setBookings(data);
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase.from('bookings').select('*');
+            if (error) throw error;
+            if (data) setBookings(data);
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
     fetchBookings();
-    
-    // Realtime subscription
-    const subscription = supabase
-        .channel('public:bookings')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-            // handle insert/update/delete
-            console.log('Realtime update:', payload);
-        })
-        .subscribe();
-        
-    return () => { supabase.removeChannel(subscription); }
+    // ... Subscription logic ...
   }, []);
   */
 
   const addBooking = async (input: CreateBookingInput) => {
-    // SUPABASE TODO: 
-    // const { data, error } = await supabase.from('bookings').insert([{ ...input, status: 'pending' }]).select();
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+        // Simulate API Call Latency
+        await delay(1500); 
 
-    // Mock Logic:
-    const newBooking: Booking = {
-      ...input,
-      id: `b${Date.now()}`, // Generate a random ID
-      status: 'pending'
-    };
-    setBookings(prev => [newBooking, ...prev]);
+        // SUPABASE TODO: 
+        // const { data, error } = await supabase.from('bookings').insert([{ ...input, status: 'pending' }]).select();
+        // if (error) throw error;
+
+        // Mock Logic:
+        const newBooking: Booking = {
+        ...input,
+        id: `b${Date.now()}`, // Generate a random ID
+        status: 'pending'
+        };
+        setBookings(prev => [newBooking, ...prev]);
+    } catch (e: any) {
+        console.error("Booking Error:", e);
+        setError("Failed to create booking. Please try again.");
+        throw e; // Re-throw to let the UI handle it if needed
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const updateBookingStatus = async (id: string, status: Booking['status']) => {
-    // SUPABASE TODO:
-    // await supabase.from('bookings').update({ status }).eq('id', id);
+    setIsLoading(true);
+    try {
+        // Simulate API Call
+        await delay(800);
 
-    // Mock Logic:
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
+        // SUPABASE TODO:
+        // await supabase.from('bookings').update({ status }).eq('id', id);
+
+        // Mock Logic:
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
+    } catch (e: any) {
+        setError("Failed to update status.");
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const addExpense = async (input: Omit<Expense, 'id' | 'type'>) => {
+      setIsLoading(true);
+      try {
+          await delay(500);
+          const newExpense: Expense = {
+              ...input,
+              id: `e${Date.now()}`,
+              type: 'expense'
+          };
+          setExpenses(prev => [newExpense, ...prev]);
+      } catch (e) {
+          setError("Could not add expense");
+      } finally {
+          setIsLoading(false);
+      }
   };
 
   // Cart Logic (Local Only usually, unless syncing across devices)
@@ -220,7 +268,11 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
       removeFromCart,
       updateCartQuantity,
       clearCart,
-      cartTotal
+      cartTotal,
+      expenses,
+      addExpense,
+      isLoading,
+      error
     }}>
       {children}
     </DataContext.Provider>

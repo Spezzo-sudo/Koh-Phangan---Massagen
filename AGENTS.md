@@ -6,7 +6,7 @@
 *   **Core Concept:** Customers book treatments (Massage, Nails) to their *current location* (Hotel, Villa).
 *   **Analogy:** "Uber/Grab for Wellness".
 *   **Location:** Koh Phangan, Thailand.
-*   **Payment:** Cash on Arrival (currently).
+*   **Payment:** Cash on Arrival (currently). **Future:** Credit Card (Stripe/Omise) is required to enforce strict no-show fees.
 
 ## 2. Domain Specifics (The "Rules of the Island")
 
@@ -35,7 +35,13 @@ There is a strict separation in the UI and Logic between:
 ### E. Legal & PDPA (Thailand)
 *   **Cookie Banner:** Mandatory in Thailand. State is stored in LocalStorage (`cookie-consent`).
 *   **Privacy:** Must mention collection of GPS and Health data.
-*   **LINE:** The primary communication channel in Thailand. A floating LINE button is present globally.
+*   **Communication:** 
+    *   **LINE:** Crucial for Thai staff/locals.
+    *   **WhatsApp:** Crucial for Tourists/Foreigners.
+
+### F. Scheduling Rules
+*   **Lead Time:** Bookings for the *same day* require at least **2 hours** notice (travel time buffer).
+*   **Cancellation:** Free up to 5 hours before. Full price charged if no-show (enforced via Terms agreement in MVP, via Card hold in v2).
 
 ## 3. Architecture & State
 *   **Data Source:** Currently `constants.ts` (In-Memory).

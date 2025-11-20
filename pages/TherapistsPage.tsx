@@ -2,10 +2,16 @@
 import React, { useState } from 'react';
 import { THERAPISTS } from '../constants';
 import { ServiceType } from '../types';
-import { Star, Sparkles, Hand } from 'lucide-react';
+import { Star, Sparkles, Hand, Instagram, Facebook } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSEO } from '../hooks/useSEO';
 
 export default function TherapistsPage() {
+  useSEO({
+      title: "Our Team",
+      description: "Meet our certified Thai massage therapists and professional nail artists. Vetted, experienced, and ready to come to you."
+  });
+
   const [activeTab, setActiveTab] = useState<'massage' | 'beauty'>('massage');
 
   const massageTherapists = THERAPISTS.filter(t => 
@@ -55,7 +61,7 @@ export default function TherapistsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {displayedTherapists.map(therapist => (
-          <div key={therapist.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 group">
+          <div key={therapist.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 group flex flex-col">
             <div className="h-64 overflow-hidden relative">
               <div className="absolute inset-0 bg-brand-dark/0 group-hover:bg-brand-dark/10 transition-colors z-10"></div>
               <img 
@@ -69,7 +75,7 @@ export default function TherapistsPage() {
                     </div>
                 )}
             </div>
-            <div className="p-6">
+            <div className="p-6 flex-1 flex flex-col">
               <div className="flex justify-between items-start mb-2">
                 <h2 className="font-serif text-2xl font-bold text-gray-800">{therapist.name}</h2>
                 <div className="flex items-center bg-brand-sand px-2 py-1 rounded text-brand-gold font-bold text-sm">
@@ -90,14 +96,31 @@ export default function TherapistsPage() {
                 </div>
               </div>
 
-              <Link 
-                to={`/booking`}
-                className={`block w-full text-center text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors ${
-                    activeTab === 'beauty' ? 'bg-pink-500' : 'bg-brand-teal hover:bg-brand-dark'
-                }`}
-              >
-                Book Appointment
-              </Link>
+              <div className="mt-auto space-y-3">
+                {therapist.socialHandles && (
+                    <div className="flex gap-2 justify-center mb-3">
+                        {therapist.socialHandles.instagram && (
+                            <a href={`https://instagram.com/${therapist.socialHandles.instagram}`} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-pink-600 transition-colors" title="View Portfolio">
+                                <Instagram size={20} />
+                            </a>
+                        )}
+                        {therapist.socialHandles.facebook && (
+                            <a href={`https://facebook.com/${therapist.socialHandles.facebook}`} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-blue-600 transition-colors" title="Facebook Profile">
+                                <Facebook size={20} />
+                            </a>
+                        )}
+                    </div>
+                )}
+
+                <Link 
+                    to={`/booking`}
+                    className={`block w-full text-center text-white py-3 rounded-lg font-medium hover:opacity-90 transition-colors ${
+                        activeTab === 'beauty' ? 'bg-pink-500' : 'bg-brand-teal hover:bg-brand-dark'
+                    }`}
+                >
+                    Book Appointment
+                </Link>
+              </div>
             </div>
           </div>
         ))}

@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand, Crosshair, Users } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand, Crosshair, Users, Phone } from 'lucide-react';
 import { SERVICES, THERAPISTS, TIME_SLOTS, BOOKING_ADDONS } from '../constants';
 import { useAuth, useLanguage, useData } from '../contexts';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
 import { ServiceCategory } from '../types';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 // Helper function to get next 7 days
 const getNextDays = (days = 7) => {
@@ -23,7 +24,7 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
-  const { addBooking } = useData();
+  const { addBooking, isLoading, error } = useData();
   
   // Steps: 0: Service, 1: Addons, 2: Date/Time, 3: Therapist, 4: Details/Location, 5: Confirm
   const [step, setStep] = useState(0);
@@ -46,16 +47,50 @@ export default function BookingPage() {
       notes: '', 
       address: '' 
   });
+  
+  // Terms Agreement Checkbox State
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Validation Errors
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Location State
   const [isLocating, setIsLocating] = useState(false);
 
-  // Update name if user logs in mid-flow
+  // --- RESTORE STATE AFTER LOGIN ---
   useEffect(() => {
-      if (user) {
+      const savedState = sessionStorage.getItem('pendingBooking');
+      if (savedState) {
+          try {
+              const parsed = JSON.parse(savedState);
+              
+              // Restore all states
+              if (parsed.selectedServiceId) setSelectedServiceId(parsed.selectedServiceId);
+              if (parsed.selectedAddons) setSelectedAddons(parsed.selectedAddons);
+              if (parsed.selectedDate) setSelectedDate(new Date(parsed.selectedDate)); // Convert string back to Date
+              if (parsed.selectedTime) setSelectedTime(parsed.selectedTime);
+              if (parsed.duration) setDuration(parsed.duration);
+              if (parsed.selectedTherapistId) setSelectedTherapistId(parsed.selectedTherapistId);
+              if (parsed.customerDetails) {
+                  setCustomerDetails(prev => ({
+                      ...prev,
+                      ...parsed.customerDetails,
+                      // If user logged in, prioritize their auth name over the saved name unless empty
+                      name: user?.name || parsed.customerDetails.name
+                  }));
+              }
+              if (parsed.step) setStep(parsed.step);
+
+              // Clear storage so we don't restore old data next time
+              sessionStorage.removeItem('pendingBooking');
+          } catch (e) {
+              console.error("Failed to restore booking state", e);
+          }
+      } else if (user) {
+          // Standard behavior: fill name if logged in
           setCustomerDetails(prev => ({...prev, name: user.name}));
       }
-  }, [user]);
+  }, [user]); // Run when user auth state settles
   
   // --- NEW LOCATION LOGIC ---
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
@@ -64,9 +99,9 @@ export default function BookingPage() {
   // Use the new hook! This separates UI from API logic
   const { predictions, isLoading: isLoadingLocations } = usePlacesAutocomplete(customerDetails.address);
 
-  // Auto-advance if service ID is in URL
+  // Auto-advance if service ID is in URL (only if not restoring state)
   useEffect(() => {
-    if (selectedServiceId && step === 0) {
+    if (selectedServiceId && step === 0 && !sessionStorage.getItem('pendingBooking')) {
       setStep(1);
     }
   }, [selectedServiceId, step]);
@@ -109,7 +144,7 @@ export default function BookingPage() {
   }, 0);
   const totalPrice = basePrice + addonsPrice;
 
-  // Time Slot Logic (Disable past times)
+  // Time Slot Logic (Disable past times and enforce 2-hour lead time)
   const availableTimeSlots = useMemo(() => {
     const now = new Date();
     const isToday = selectedDate.toDateString() === now.toDateString();
@@ -119,7 +154,8 @@ export default function BookingPage() {
     const currentHour = now.getHours();
     return TIME_SLOTS.filter(time => {
         const [hour] = time.split(':').map(Number);
-        return hour > currentHour + 1; // Allow booking at least 1 hour in advance
+        // Enforce 2 hour lead time (e.g. if 13:00, earliest booking is 15:00)
+        return hour >= currentHour + 2; 
     });
   }, [selectedDate]);
 
@@ -140,8 +176,6 @@ export default function BookingPage() {
     navigator.geolocation.getCurrentPosition(
         (position) => {
             const { latitude, longitude } = position.coords;
-            // In a real app, use Reverse Geocoding API here.
-            // For MVP, we put coords in text.
             setCustomerDetails(prev => ({
                 ...prev,
                 address: `📍 GPS Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
@@ -156,40 +190,82 @@ export default function BookingPage() {
     );
   };
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const validateStep4 = () => {
+      const errors: Record<string, string> = {};
+      
+      if (!customerDetails.name.trim()) errors.name = "Name is required";
+      if (!customerDetails.address.trim()) errors.address = "Location is required";
+      
+      // Strict Phone Regex: Allows +, (), space, -, .
+      const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+      if (!customerDetails.phone.trim()) {
+          errors.phone = "Phone number is required";
+      } else if (!phoneRegex.test(customerDetails.phone.replace(/\s/g, ''))) {
+          errors.phone = "Please enter a valid phone number (e.g. +66 123 456 789)";
+      }
+      
+      if (!agreedToTerms) {
+          errors.terms = "You must agree to the payment terms";
+      }
+
+      setValidationErrors(errors);
+      return Object.keys(errors).length === 0;
+  };
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // AUTH GUARD
+    // 1. Validate Input FIRST
+    if (!validateStep4()) {
+        return;
+    }
+
+    // 2. Check Auth & Redirect if needed
     if (!isAuthenticated) {
+        const stateToSave = {
+            selectedServiceId,
+            selectedAddons,
+            selectedDate: selectedDate.toISOString(),
+            selectedTime,
+            duration,
+            selectedTherapistId,
+            customerDetails,
+            step: 4
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(stateToSave));
+
         navigate('/login?redirect=booking');
         return;
     }
     
+    // 3. Submit Booking
     if (selectedServiceId && selectedTherapistId && selectedTime) {
-        addBooking({
-            serviceId: selectedServiceId,
-            therapistId: selectedTherapistId,
-            date: selectedDate.toISOString(),
-            time: selectedTime,
-            duration: duration,
-            addons: selectedAddons,
-            totalPrice: totalPrice,
-            customerName: customerDetails.name,
-            customerPhone: customerDetails.phone,
-            location: customerDetails.address,
-            notes: customerDetails.notes,
-        });
+        try {
+            await addBooking({
+                serviceId: selectedServiceId,
+                therapistId: selectedTherapistId,
+                date: selectedDate.toISOString(),
+                time: selectedTime,
+                duration: duration,
+                addons: selectedAddons,
+                totalPrice: totalPrice,
+                customerName: customerDetails.name,
+                customerPhone: customerDetails.phone,
+                location: customerDetails.address,
+                notes: customerDetails.notes,
+            });
+            setStep(5); // Confirmation
+            window.scrollTo(0, 0);
+            sessionStorage.removeItem('pendingBooking');
+        } catch (err) {
+            // Error handled by context and displayed in UI via 'error' state
+        }
     }
-
-    setStep(5); // Confirmation
-    window.scrollTo(0, 0);
   };
 
-  // Reset selection when going back to services
   const handleBackToServices = () => {
       setSelectedServiceId(null);
       setStep(0);
-      // Reset extras too
       setSelectedAddons([]);
       setDuration(60);
   };
@@ -211,10 +287,9 @@ export default function BookingPage() {
   );
 
   const renderStickyFooter = () => {
-      if (step >= 4 || step === 0) return null; // Don't show on first or last steps
+      if (step >= 4 || step === 0) return null; 
       
       return (
-        // Adjusted bottom position to sit ABOVE the main mobile navigation (approx 72px)
         <div className="fixed bottom-[72px] md:bottom-0 left-0 w-full bg-white/95 backdrop-blur border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 md:hidden animate-slide-up">
             <div className="flex justify-between items-center">
                 <div>
@@ -233,7 +308,6 @@ export default function BookingPage() {
       );
   };
 
-  // Filter Services based on Category
   const filteredServices = SERVICES.filter(s => s.category === selectedCategory);
 
   if (step === 5) {
@@ -262,17 +336,12 @@ export default function BookingPage() {
              </p>
              <span className="text-xs bg-white px-2 py-1 rounded border border-gray-200 text-gray-500">Includes Fees</span>
           </div>
-          {selectedAddons.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-gray-200/50 text-xs text-gray-500">
-                  Includes: {selectedAddons.map(id => BOOKING_ADDONS.find(a => a.id === id)?.title).join(', ')}
-              </div>
-          )}
         </div>
 
         <div className="mb-8 w-full max-w-md bg-orange-50 border border-orange-100 p-4 rounded-lg flex items-start gap-3 text-left">
             <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={18} />
             <p className="text-sm text-orange-800">
-                <span className="font-bold block mb-1">Cancellation Policy</span>
+                <span className="font-bold block mb-1">Cancellation Policy (Strict)</span>
                 {t('booking.cancellationPolicy')}
             </p>
         </div>
@@ -296,7 +365,6 @@ export default function BookingPage() {
   }
 
   return (
-    // Increased padding-bottom (pb-48) to accommodate double footers (Nav + Sticky Price) on mobile
     <div className="max-w-3xl mx-auto px-4 py-8 pb-48">
       <h1 className="font-serif text-3xl font-bold text-brand-dark mb-8 text-center">
         {step === 4 ? 'Where should we come?' : t('hero.cta')}
@@ -304,10 +372,9 @@ export default function BookingPage() {
       
       {renderProgressBar()}
 
-      {/* Step 0: Service Selection with Categories */}
+      {/* Step 0: Service Selection */}
       {step === 0 && (
         <div className="animate-fade-in">
-            {/* Category Tabs */}
             <div className="flex justify-center gap-2 mb-6 overflow-x-auto no-scrollbar pb-2">
                 {(['Massage', 'Nails', 'Packages'] as ServiceCategory[]).map(cat => (
                     <button
@@ -360,7 +427,7 @@ export default function BookingPage() {
         </div>
       )}
 
-      {/* Step 1: Add-ons (New) */}
+      {/* Step 1: Add-ons */}
       {step === 1 && (
         <div className="animate-fade-in">
            <button onClick={handleBackToServices} className="flex items-center text-sm text-gray-500 hover:text-brand-teal mb-4">
@@ -371,7 +438,9 @@ export default function BookingPage() {
           <p className="text-gray-500 mb-6 text-sm">Customize your treatment with our premium add-ons.</p>
 
           <div className="space-y-4 mb-8">
-            {BOOKING_ADDONS.map(addon => {
+            {BOOKING_ADDONS.filter(addon => 
+                !addon.validFor || addon.validFor.includes(selectedService?.category || 'Massage')
+            ).map(addon => {
                 const isSelected = selectedAddons.includes(addon.id);
                 return (
                     <div 
@@ -423,7 +492,6 @@ export default function BookingPage() {
                 onClick={() => setDuration(60)}
                 className={`flex-1 py-3 rounded-lg border-2 font-medium ${duration === 60 ? 'border-brand-teal bg-brand-teal/10 text-brand-teal' : 'border-gray-100'}`}
               >
-                 {/* Dynamic Label based on category */}
                  {selectedService?.category === 'Nails' ? 'Standard' : '60 Mins'} 
                  <span className="block text-sm font-bold">({selectedService?.price60} THB)</span>
               </button>
@@ -459,7 +527,14 @@ export default function BookingPage() {
           </div>
 
           <div>
-            <h3 className="font-bold mb-4">Select Time</h3>
+            <h3 className="font-bold mb-2">Select Time</h3>
+             {/* Warning about Lead Time */}
+             {selectedDate.toDateString() === new Date().toDateString() && (
+                 <p className="text-xs text-orange-600 mb-4 flex items-center gap-1">
+                     <Clock size={12} /> {t('booking.leadTimeNotice')}
+                 </p>
+             )}
+
             {availableTimeSlots.length > 0 ? (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {availableTimeSlots.map(time => (
@@ -478,12 +553,11 @@ export default function BookingPage() {
                 </div>
             ) : (
                 <div className="text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-gray-500">
-                    No available slots for today. Please select another date.
+                    No more slots available today due to lead time. Please select tomorrow.
                 </div>
             )}
           </div>
 
-          {/* Action Button - NOW VISIBLE ON MOBILE */}
           <div className="pt-8 flex justify-end w-full">
             <button
               disabled={!selectedTime}
@@ -544,7 +618,6 @@ export default function BookingPage() {
                   </div>
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">{therapist.bio}</p>
                   
-                  {/* Review Snippet */}
                   {therapist.recentReview && (
                     <div className="mt-2 text-xs text-gray-500 italic flex items-center gap-1">
                         <span className="text-brand-teal">"</span>{therapist.recentReview}<span className="text-brand-teal">"</span>
@@ -553,13 +626,6 @@ export default function BookingPage() {
 
                   <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
                       <MapPin size={12} /> Based in {therapist.locationBase}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {therapist.skills.map(skill => (
-                      <span key={skill} className="px-2 py-1 bg-gray-100 text-xs rounded-md text-gray-600">
-                        {skill}
-                      </span>
-                    ))}
                   </div>
                 </div>
               </button>
@@ -573,7 +639,7 @@ export default function BookingPage() {
         </div>
       )}
 
-      {/* Step 4: Customer Details & Location (Maps Autocomplete) */}
+      {/* Step 4: Customer Details & Location */}
       {step === 4 && (
         <form onSubmit={handleBookingSubmit} className="animate-fade-in max-w-md mx-auto pb-12">
           <button type="button" onClick={() => setStep(3)} className="flex items-center text-sm text-gray-500 hover:text-brand-teal mb-4">
@@ -581,7 +647,6 @@ export default function BookingPage() {
           </button>
           
           <h3 className="font-bold text-xl mb-2">Location & Details</h3>
-          <p className="text-sm text-gray-500 mb-6">Where should {selectedTherapist?.name} {requiresMultiStaff ? '& Team' : ''} come to?</p>
           
           {!isAuthenticated && (
             <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg mb-6 flex items-center gap-3">
@@ -592,26 +657,32 @@ export default function BookingPage() {
                 </div>
             </div>
           )}
+          
+          {error && (
+              <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6 animate-shake">
+                  <AlertTriangle size={16} className="inline mr-2" />
+                  {error}
+              </div>
+          )}
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
             
-            {/* GOOGLE MAPS / MOCK INPUT */}
             <div className="mb-6 relative" ref={locationInputRef}>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
                     <MapPin size={16} className="text-brand-teal"/> 
-                    Service Location (Hotel / Villa)
+                    Service Location (Hotel / Villa) *
                 </label>
                 
                 <div className="flex gap-2">
                     <div className="relative flex-1">
                         <input 
-                            required
                             type="text" 
-                            className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none"
+                            className={`w-full pl-10 pr-4 py-3 rounded-lg border outline-none ${validationErrors.address ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-2 focus:ring-brand-teal'}`}
                             placeholder="Search for hotel or village..."
                             value={customerDetails.address}
                             onChange={e => {
                                 setCustomerDetails({...customerDetails, address: e.target.value});
+                                setValidationErrors(prev => ({...prev, address: ''}));
                                 setShowLocationSuggestions(true);
                             }}
                             onFocus={() => setShowLocationSuggestions(true)}
@@ -625,11 +696,12 @@ export default function BookingPage() {
                         className="px-3 bg-gray-100 rounded-lg text-gray-600 hover:bg-brand-light hover:text-brand-teal transition-colors"
                         title="Use my current location"
                     >
-                        {isLocating ? <span className="animate-spin">⏳</span> : <Crosshair size={20} />}
+                        {isLocating ? <LoadingSpinner /> : <Crosshair size={20} />}
                     </button>
                 </div>
+                {validationErrors.address && <p className="text-red-500 text-xs mt-1">{validationErrors.address}</p>}
 
-                {/* Autocomplete Dropdown (Uses Hook Data) */}
+                {/* Autocomplete Dropdown */}
                 {showLocationSuggestions && (customerDetails.address.length > 1 || predictions.length > 0) && (
                     <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-60 overflow-y-auto">
                         {isLoadingLocations ? (
@@ -641,6 +713,7 @@ export default function BookingPage() {
                                 onClick={() => {
                                     setCustomerDetails({...customerDetails, address: pred.description});
                                     setShowLocationSuggestions(false);
+                                    setValidationErrors(prev => ({...prev, address: ''}));
                                 }}
                             >
                                 <MapPin size={14} className="text-gray-400" />
@@ -655,29 +728,40 @@ export default function BookingPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                 <input 
-                  required
                   type="text" 
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none"
+                  className={`w-full px-4 py-2 rounded-lg border outline-none ${validationErrors.name ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-2 focus:ring-brand-teal'}`}
                   placeholder="Your Name"
                   value={customerDetails.name}
-                  onChange={e => setCustomerDetails({...customerDetails, name: e.target.value})}
+                  onChange={e => {
+                      setCustomerDetails({...customerDetails, name: e.target.value});
+                      setValidationErrors(prev => ({...prev, name: ''}));
+                  }}
                 />
+                {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone / WhatsApp</label>
-                <input 
-                  required
-                  type="tel" 
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none"
-                  placeholder="+66..."
-                  value={customerDetails.phone}
-                  onChange={e => setCustomerDetails({...customerDetails, phone: e.target.value})}
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    Phone / WhatsApp * 
+                </label>
+                <div className="relative">
+                    <input 
+                    type="tel" 
+                    className={`w-full pl-10 px-4 py-2 rounded-lg border outline-none ${validationErrors.phone ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-2 focus:ring-brand-teal'}`}
+                    placeholder="+66..."
+                    value={customerDetails.phone}
+                    onChange={e => {
+                        setCustomerDetails({...customerDetails, phone: e.target.value});
+                        setValidationErrors(prev => ({...prev, phone: ''}));
+                    }}
+                    />
+                    <Phone size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                </div>
+                {validationErrors.phone && <p className="text-red-500 text-xs mt-1">{validationErrors.phone}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bungalow Number / Specifics</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Specific Instructions</label>
                 <textarea 
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none h-20 resize-none"
                   placeholder="e.g. Bungalow B4, near the pool..."
@@ -688,26 +772,55 @@ export default function BookingPage() {
             </div>
           </div>
 
+          {/* Payment / No-Show Warning */}
+          <div className="bg-red-50 border border-red-100 p-4 rounded-lg mb-6">
+             <h4 className="text-red-800 font-bold flex items-center gap-2 mb-2 text-sm">
+                 <AlertTriangle size={16} /> Payment & Cancellation Rule
+             </h4>
+             <p className="text-red-700 text-xs mb-3 leading-relaxed">
+                 Because our therapists travel to you, we have a strict no-show policy. 
+                 If you are not at the location within 15 minutes of the start time, 
+                 you are liable for the full cost.
+             </p>
+             
+             <label className="flex items-start gap-3 cursor-pointer group">
+                 <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 mt-0.5 ${agreedToTerms ? 'bg-brand-teal border-brand-teal' : 'bg-white border-gray-400 group-hover:border-brand-teal'}`}>
+                     {agreedToTerms && <Check size={14} className="text-white" />}
+                 </div>
+                 <input 
+                    type="checkbox" 
+                    className="hidden" 
+                    checked={agreedToTerms}
+                    onChange={(e) => {
+                        setAgreedToTerms(e.target.checked);
+                        setValidationErrors(prev => ({...prev, terms: ''}));
+                    }}
+                 />
+                 <span className="text-sm text-gray-700 font-medium">
+                     {t('booking.agreeToTerms')}
+                 </span>
+             </label>
+             {validationErrors.terms && <p className="text-red-500 text-xs mt-2 pl-8">{validationErrors.terms}</p>}
+          </div>
+
           <div className="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center border border-gray-200">
              <div>
                  <span className="text-gray-600 block text-xs">Total Cash on Arrival</span>
                  <div className="text-xl font-bold text-brand-dark">{totalPrice} THB</div>
              </div>
-             <div className="text-right text-xs text-gray-500">
-                 <div>{selectedService?.category === 'Nails' ? (duration === 60 ? 'Standard' : 'Luxury') : `${duration} min`}</div>
-                 {selectedAddons.length > 0 && <div>+ {selectedAddons.length} extras</div>}
-             </div>
           </div>
 
           <button 
             type="submit"
-            className="w-full bg-brand-dark text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-gray-800 transition-colors"
+            disabled={isLoading}
+            className="w-full bg-brand-dark text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-gray-800 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {isAuthenticated ? 'Confirm Booking' : 'Login to Confirm'}
+            {isLoading ? (
+                <><LoadingSpinner /> Processing...</>
+            ) : (
+                <>{isAuthenticated ? 'Confirm Booking' : 'Login to Confirm'}</>
+            )}
           </button>
-          <p className="text-center text-xs text-gray-400 mt-4">
-            By booking you agree to our terms. 
-          </p>
         </form>
       )}
       

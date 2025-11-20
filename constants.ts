@@ -1,5 +1,4 @@
-
-import { Service, ServiceType, Therapist, Product, Booking, Addon } from './types';
+import { Service, ServiceType, Therapist, Product, Booking, Addon, Expense } from './types';
 
 export const SERVICES: Service[] = [
   // --- MASSAGES ---
@@ -11,7 +10,8 @@ export const SERVICES: Service[] = [
     price90: 450,
     type: ServiceType.THAI,
     category: 'Massage',
-    image: 'https://picsum.photos/id/106/800/600'
+    image: 'https://picsum.photos/id/106/800/600',
+    staffRequired: 1
   },
   {
     id: 's2',
@@ -21,7 +21,8 @@ export const SERVICES: Service[] = [
     price90: 600,
     type: ServiceType.OIL,
     category: 'Massage',
-    image: 'https://picsum.photos/id/65/800/600'
+    image: 'https://picsum.photos/id/65/800/600',
+    staffRequired: 1
   },
   {
     id: 's3',
@@ -31,7 +32,8 @@ export const SERVICES: Service[] = [
     price90: 750,
     type: ServiceType.DEEP_TISSUE,
     category: 'Massage',
-    image: 'https://picsum.photos/id/338/800/600'
+    image: 'https://picsum.photos/id/338/800/600',
+    staffRequired: 1
   },
   {
     id: 's4',
@@ -41,7 +43,8 @@ export const SERVICES: Service[] = [
     price90: 600,
     type: ServiceType.ALOE_VERA,
     category: 'Massage',
-    image: 'https://picsum.photos/id/360/800/600'
+    image: 'https://picsum.photos/id/360/800/600',
+    staffRequired: 1
   },
   // --- NAILS & BEAUTY ---
   {
@@ -52,7 +55,8 @@ export const SERVICES: Service[] = [
     price90: 950, // Spa Version (scrub + mask)
     type: ServiceType.MANICURE,
     category: 'Nails',
-    image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=800&q=80',
+    staffRequired: 1
   },
   {
     id: 'n2',
@@ -62,7 +66,8 @@ export const SERVICES: Service[] = [
     price90: 1100, // Luxury Spa Version
     type: ServiceType.PEDICURE,
     category: 'Nails',
-    image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059e98b?auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059e98b?auto=format&fit=crop&w=800&q=80',
+    staffRequired: 1
   },
   {
     id: 'n3',
@@ -72,9 +77,10 @@ export const SERVICES: Service[] = [
     price90: 1200,
     type: ServiceType.NAIL_ART,
     category: 'Nails',
-    image: 'https://images.unsplash.com/photo-1632345031635-fe1822b5d8c2?auto=format&fit=crop&w=800&q=80'
+    image: 'https://images.unsplash.com/photo-1632345031635-fe1822b5d8c2?auto=format&fit=crop&w=800&q=80',
+    staffRequired: 1
   },
-  // --- PACKAGES ---
+  // --- PACKAGES & EVENTS ---
   {
     id: 'pk1',
     title: 'Bridal Glow Package',
@@ -85,6 +91,17 @@ export const SERVICES: Service[] = [
     category: 'Packages',
     image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&w=800&q=80',
     staffRequired: 2 // Requires 1 Massage + 1 Nail artist
+  },
+  {
+    id: 'pk2',
+    title: 'Full Moon Party Neon Glow',
+    description: 'Professional Neon Body Paint & Waterproof Makeup for the biggest party on earth. We come to your hostel/hotel.',
+    price60: 600, 
+    price90: 1000, // Group session or full body
+    type: ServiceType.PACKAGE,
+    category: 'Packages',
+    image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80',
+    staffRequired: 1
   }
 ];
 
@@ -93,25 +110,36 @@ export const BOOKING_ADDONS: Addon[] = [
         id: 'a1',
         title: 'Tiger Balm Upgrade',
         price: 100,
-        description: 'Apply cooling Tiger Balm to specific problem areas.'
+        description: 'Apply cooling Tiger Balm to specific problem areas.',
+        validFor: ['Massage', 'Packages']
     },
     {
         id: 'a2',
         title: 'Premium Coconut Oil',
         price: 50,
-        description: 'Upgrade to 100% organic cold-pressed coconut oil.'
+        description: 'Upgrade to 100% organic cold-pressed coconut oil.',
+        validFor: ['Massage', 'Packages']
     },
     {
         id: 'a3',
         title: 'Gel Polish Removal',
         price: 200,
-        description: 'Professional removal of old gel polish.'
+        description: 'Professional removal of old gel polish.',
+        validFor: ['Nails', 'Packages']
     },
     {
         id: 'a4',
         title: 'Nail Art (Per Finger)',
         price: 50,
-        description: 'Custom design on a single nail.'
+        description: 'Custom design on a single nail.',
+        validFor: ['Nails', 'Packages']
+    },
+    {
+        id: 'a5',
+        title: 'Fake Lashes',
+        price: 150,
+        description: 'High quality lashes for your night out.',
+        validFor: ['Packages']
     }
 ];
 
@@ -120,7 +148,7 @@ export const THERAPISTS: Therapist[] = [
     id: 't1',
     name: 'Ms. Ang',
     image: 'https://picsum.photos/id/64/300/300',
-    skills: [ServiceType.THAI, ServiceType.FOOT, ServiceType.PACKAGE], // Added PACKAGE
+    skills: [ServiceType.THAI, ServiceType.FOOT, ServiceType.PACKAGE],
     bio: 'Specialist in traditional Wat Pho style Thai massage. 15 years experience.',
     rating: 4.9,
     available: true,
@@ -133,7 +161,7 @@ export const THERAPISTS: Therapist[] = [
     id: 't2',
     name: 'Ms. Noi',
     image: 'https://picsum.photos/id/331/300/300',
-    skills: [ServiceType.THAI, ServiceType.OIL, ServiceType.DEEP_TISSUE, ServiceType.ALOE_VERA, ServiceType.PACKAGE], // Added PACKAGE
+    skills: [ServiceType.THAI, ServiceType.OIL, ServiceType.DEEP_TISSUE, ServiceType.ALOE_VERA, ServiceType.PACKAGE],
     bio: 'All-rounder with strong hands for deep tissue and a gentle touch for oil massage.',
     rating: 4.8,
     available: true,
@@ -166,21 +194,27 @@ export const THERAPISTS: Therapist[] = [
     locationBase: 'Baan Tai',
     verified: true,
     reviewCount: 32,
-    recentReview: "Her nail art is amazing! So precise."
+    recentReview: "Her nail art is amazing! So precise.",
+    socialHandles: {
+        instagram: 'may.nails.phangan',
+        facebook: 'maybeautyphangan'
+    }
   },
-  // NEW THERAPIST TO ADD VARIETY FOR NAILS
   {
     id: 't5',
     name: 'Ms. Pim',
     image: 'https://images.unsplash.com/photo-1595239960035-78cb77234264?auto=format&fit=crop&w=300&q=80',
-    skills: [ServiceType.MANICURE, ServiceType.PEDICURE, ServiceType.NAIL_ART],
+    skills: [ServiceType.MANICURE, ServiceType.PEDICURE, ServiceType.NAIL_ART, ServiceType.PACKAGE],
     bio: 'Expert in Gel and Acrylic extensions. Creative designs.',
     rating: 4.8,
     available: true,
     locationBase: 'Thong Sala',
     verified: true,
     reviewCount: 18,
-    recentReview: "Love my new nails, thank you!"
+    recentReview: "Love my new nails, thank you!",
+    socialHandles: {
+        instagram: 'pim_creative_nails'
+    }
   }
 ];
 
@@ -240,7 +274,6 @@ export const TIME_SLOTS = [
   '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
 ];
 
-// Mock Data for Google Maps Autocomplete
 export const KOH_PHANGAN_LOCATIONS = [
   "Thong Sala Pier, Koh Phangan",
   "Haad Rin Beach (Full Moon Party)",
@@ -284,5 +317,46 @@ export const MOCK_BOOKINGS: Booking[] = [
     customerPhone: '+49 151 444 555',
     location: 'Baan Tai Villas',
     status: 'pending'
+  },
+  {
+    id: 'b3',
+    serviceId: 's3',
+    therapistId: 't2',
+    date: new Date(Date.now() - 172800000).toISOString(),
+    time: '16:00',
+    duration: 60,
+    addons: [],
+    totalPrice: 500,
+    customerName: 'Mike Ross',
+    customerPhone: '+1 202 555 0199',
+    location: 'Bottle Beach Resort',
+    status: 'completed'
   }
+];
+
+export const MOCK_EXPENSES: Expense[] = [
+    {
+        id: 'e1',
+        title: 'New Coconut Oil Stock (5L)',
+        amount: 1200,
+        date: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+        category: 'supplies',
+        type: 'expense'
+    },
+    {
+        id: 'e2',
+        title: 'Facebook Ads - Full Moon Promo',
+        amount: 2000,
+        date: new Date(Date.now() - 432000000).toISOString(), // 5 days ago
+        category: 'marketing',
+        type: 'expense'
+    },
+    {
+        id: 'e3',
+        title: 'Staff Uniforms (New Team)',
+        amount: 1500,
+        date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        category: 'other',
+        type: 'expense'
+    }
 ];

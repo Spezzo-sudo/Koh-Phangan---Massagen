@@ -1,10 +1,19 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Briefcase } from 'lucide-react';
+import { User, Briefcase, Shield } from 'lucide-react';
+import { useAuth } from '../contexts';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleLogin = (role: 'customer' | 'therapist' | 'admin') => {
+      login(role);
+      if (role === 'customer') navigate('/customer/dashboard');
+      else if (role === 'therapist') navigate('/therapist/dashboard');
+      else navigate('/admin/dashboard');
+  };
 
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 bg-brand-sand/30">
@@ -16,7 +25,7 @@ export default function LoginPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
         {/* Customer Login */}
         <button 
-          onClick={() => navigate('/customer/dashboard')}
+          onClick={() => handleLogin('customer')}
           className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-brand-teal transition-all group text-left"
         >
           <div className="w-14 h-14 bg-brand-light rounded-full flex items-center justify-center text-brand-teal mb-4 group-hover:scale-110 transition-transform">
@@ -28,7 +37,7 @@ export default function LoginPage() {
 
         {/* Therapist Login */}
         <button 
-          onClick={() => navigate('/therapist/dashboard')}
+          onClick={() => handleLogin('therapist')}
           className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-brand-teal transition-all group text-left"
         >
           <div className="w-14 h-14 bg-brand-dark rounded-full flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
@@ -38,6 +47,14 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500">Access your schedule, update availability, and manage job requests.</p>
         </button>
       </div>
+
+      {/* Admin Link (Discreet) */}
+      <button 
+        onClick={() => handleLogin('admin')}
+        className="mt-12 text-gray-400 text-xs hover:text-brand-dark flex items-center gap-1 transition-colors"
+      >
+          <Shield size={12} /> Admin Access
+      </button>
     </div>
   );
 }

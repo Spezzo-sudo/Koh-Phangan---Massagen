@@ -1,19 +1,25 @@
 
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Menu, ShoppingBag, Calendar, User as UserIcon, MapPin, LogIn, LogOut, Globe } from 'lucide-react';
-import Home from './pages/Home';
-import BookingPage from './pages/BookingPage';
-import TherapistsPage from './pages/TherapistsPage';
-import ShopPage from './pages/ShopPage';
-import LoginPage from './pages/LoginPage';
-import TherapistDashboard from './pages/TherapistDashboard';
-import CustomerDashboard from './pages/CustomerDashboard';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
+import { Menu, ShoppingBag, Calendar, User as UserIcon, MapPin, LogIn, LogOut, Globe, Shield, Lock } from 'lucide-react';
 import LegalFooter from './components/LegalFooter';
 import { AuthProvider, LanguageProvider, DataProvider, useAuth, useLanguage, useData } from './contexts';
 import { Language } from './types';
+import ErrorBoundary from './components/ErrorBoundary';
+import LoadingSpinner from './components/LoadingSpinner';
+
+// --- LAZY LOADED PAGES (Code Splitting) ---
+const Home = lazy(() => import('./pages/Home'));
+const BookingPage = lazy(() => import('./pages/BookingPage'));
+const TherapistsPage = lazy(() => import('./pages/TherapistsPage'));
+const ShopPage = lazy(() => import('./pages/ShopPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const TherapistDashboard = lazy(() => import('./pages/TherapistDashboard'));
+const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage')); // New 404 Page
 
 const Navbar = () => {
   const location = useLocation();
@@ -36,28 +42,28 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 py-3 px-6 flex justify-between items-center z-50 md:top-0 md:bottom-auto md:border-b md:border-t-0 transition-all">
-      <Link to="/" className="hidden md:block font-serif text-2xl font-bold text-brand-teal">
+    <nav className="fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-100 py-3 px-6 flex justify-between items-center z-50 md:top-0 md:bottom-auto md:border-b md:border-t-0 transition-all" role="navigation" aria-label="Main Navigation">
+      <Link to="/" className="hidden md:block font-serif text-2xl font-bold text-brand-teal" aria-label="Phangan Serenity Home">
         Phangan Serenity
       </Link>
       
       <div className="flex w-full md:w-auto justify-between gap-6 md:gap-8">
-        <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/')}`}>
-          <Menu size={20} />
+        <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/')}`} aria-label={t('nav.home')}>
+          <Menu size={20} aria-hidden="true" />
           <span className="text-xs font-medium">{t('nav.home')}</span>
         </Link>
-        <Link to="/booking" className={`flex flex-col items-center gap-1 ${isActive('/booking')}`}>
-          <Calendar size={20} />
+        <Link to="/booking" className={`flex flex-col items-center gap-1 ${isActive('/booking')}`} aria-label={t('nav.book')}>
+          <Calendar size={20} aria-hidden="true" />
           <span className="text-xs font-medium">{t('nav.book')}</span>
         </Link>
-        <Link to="/therapists" className={`flex flex-col items-center gap-1 ${isActive('/therapists')}`}>
-          <UserIcon size={20} />
+        <Link to="/therapists" className={`flex flex-col items-center gap-1 ${isActive('/therapists')}`} aria-label={t('nav.team')}>
+          <UserIcon size={20} aria-hidden="true" />
           <span className="text-xs font-medium">{t('nav.team')}</span>
         </Link>
-        <Link to="/shop" className={`relative flex flex-col items-center gap-1 ${isActive('/shop')}`}>
-          <ShoppingBag size={20} />
+        <Link to="/shop" className={`relative flex flex-col items-center gap-1 ${isActive('/shop')}`} aria-label={`${t('nav.shop')} ${cartCount > 0 ? `, ${cartCount} items in cart` : ''}`}>
+          <ShoppingBag size={20} aria-hidden="true" />
           {cartCount > 0 && (
-            <span className="absolute -top-1 right-2 bg-brand-gold text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold animate-pulse">
+            <span className="absolute -top-1 right-2 bg-brand-gold text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold animate-pulse" aria-hidden="true">
               {cartCount}
             </span>
           )}
@@ -65,13 +71,13 @@ const Navbar = () => {
         </Link>
         
         {isAuthenticated ? (
-          <button onClick={logout} className="flex flex-col items-center gap-1 text-gray-500 hover:text-brand-gold">
-            <LogOut size={20} />
+          <button onClick={logout} className="flex flex-col items-center gap-1 text-gray-500 hover:text-brand-gold" aria-label="Logout">
+            <LogOut size={20} aria-hidden="true" />
             <span className="text-xs font-medium">Logout</span>
           </button>
         ) : (
-          <Link to="/login" className={`flex flex-col items-center gap-1 ${isActive('/login')}`}>
-            <LogIn size={20} />
+          <Link to="/login" className={`flex flex-col items-center gap-1 ${isActive('/login')}`} aria-label={t('nav.login')}>
+            <LogIn size={20} aria-hidden="true" />
             <span className="text-xs font-medium">{t('nav.login')}</span>
           </Link>
         )}
@@ -81,16 +87,17 @@ const Navbar = () => {
         
         {/* Language Switcher */}
         <div className="relative group">
-            <button className="flex items-center gap-1 hover:text-brand-teal">
-                <Globe size={16} />
+            <button className="flex items-center gap-1 hover:text-brand-teal" aria-label="Select Language" aria-haspopup="true">
+                <Globe size={16} aria-hidden="true" />
                 <span className="uppercase">{language}</span>
             </button>
-            <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden hidden group-hover:block">
+            <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden hidden group-hover:block" role="menu">
                 {languages.map(lang => (
                     <button 
                         key={lang.code}
                         onClick={() => setLanguage(lang.code)}
                         className="w-full text-left px-4 py-2 hover:bg-brand-light flex justify-between"
+                        role="menuitem"
                     >
                         <span>{lang.code.toUpperCase()}</span>
                         <span>{lang.label}</span>
@@ -101,16 +108,20 @@ const Navbar = () => {
 
         {isAuthenticated && user ? (
              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-brand-teal text-white rounded-full flex items-center justify-center font-bold">
+                <div className={`w-8 h-8 text-white rounded-full flex items-center justify-center font-bold ${user.role === 'admin' ? 'bg-purple-600' : 'bg-brand-teal'}`} aria-hidden="true">
                     {user.name.charAt(0)}
                 </div>
-                <Link to={user.role === 'customer' ? '/customer/dashboard' : '/therapist/dashboard'} className="hover:underline">
+                <Link to={
+                    user.role === 'customer' ? '/customer/dashboard' : 
+                    user.role === 'therapist' ? '/therapist/dashboard' :
+                    '/admin/dashboard'
+                } className="hover:underline" aria-label="Go to Dashboard">
                     {user.name}
                 </Link>
              </div>
         ) : (
             <div className="flex items-center gap-2">
-                <MapPin size={16} />
+                <MapPin size={16} aria-hidden="true" />
                 <span>Mobile Service</span>
             </div>
         )}
@@ -121,6 +132,8 @@ const Navbar = () => {
 
 const Footer = () => {
     const { t } = useLanguage();
+    const { user } = useAuth();
+
     return (
         <footer className="bg-brand-dark text-brand-light pt-12">
             <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 pb-12">
@@ -142,37 +155,60 @@ const Footer = () => {
                 <p className="opacity-80 text-sm mt-4 text-brand-gold font-medium">Book Online 24/7</p>
             </div>
             </div>
-            <LegalFooter />
+            
+            <div className="relative border-t border-white/10">
+                <LegalFooter />
+                
+                {/* DISCREET ADMIN ACCESS LOCK */}
+                <div className="absolute bottom-4 right-4 md:right-10 opacity-30 hover:opacity-100 transition-opacity">
+                    {user?.role === 'admin' ? (
+                        <Link to="/admin/dashboard" className="text-brand-gold" title="Go to Admin Dashboard" aria-label="Admin Dashboard">
+                            <Shield size={16} />
+                        </Link>
+                    ) : (
+                        <Link to="/login" className="text-gray-500 hover:text-white" title="Staff Access" aria-label="Staff Login">
+                            <Lock size={14} />
+                        </Link>
+                    )}
+                </div>
+            </div>
         </footer>
     );
 };
 
 export default function App() {
   return (
-    <AuthProvider>
-        <LanguageProvider>
-            <DataProvider>
-                <HashRouter>
-                    <div className="min-h-screen flex flex-col font-sans">
-                        <Navbar />
-                        <main className="flex-grow md:pt-16 pb-20 md:pb-0">
-                        <Routes>
-                            <Route path="/" element={<Home />} />
-                            <Route path="/booking" element={<BookingPage />} />
-                            <Route path="/therapists" element={<TherapistsPage />} />
-                            <Route path="/shop" element={<ShopPage />} />
-                            <Route path="/login" element={<LoginPage />} />
-                            <Route path="/therapist/dashboard" element={<TherapistDashboard />} />
-                            <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-                            <Route path="/privacy" element={<PrivacyPage />} />
-                            <Route path="/terms" element={<TermsPage />} />
-                        </Routes>
-                        </main>
-                        <Footer />
-                    </div>
-                </HashRouter>
-            </DataProvider>
-        </LanguageProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+        <AuthProvider>
+            <LanguageProvider>
+                <DataProvider>
+                    <HashRouter>
+                        <div className="min-h-screen flex flex-col font-sans">
+                            <Navbar />
+                            <main className="flex-grow md:pt-16 pb-20 md:pb-0">
+                            <Suspense fallback={<LoadingSpinner fullScreen />}>
+                                <Routes>
+                                    <Route path="/" element={<Home />} />
+                                    <Route path="/booking" element={<BookingPage />} />
+                                    <Route path="/therapists" element={<TherapistsPage />} />
+                                    <Route path="/shop" element={<ShopPage />} />
+                                    <Route path="/login" element={<LoginPage />} />
+                                    <Route path="/therapist/dashboard" element={<TherapistDashboard />} />
+                                    <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+                                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                                    <Route path="/privacy" element={<PrivacyPage />} />
+                                    <Route path="/terms" element={<TermsPage />} />
+                                    {/* Fallback Route for 404 */}
+                                    <Route path="*" element={<NotFoundPage />} />
+                                </Routes>
+                            </Suspense>
+                            </main>
+                            <Footer />
+                        </div>
+                    </HashRouter>
+                </DataProvider>
+            </LanguageProvider>
+        </AuthProvider>
+    </ErrorBoundary>
   );
 }
