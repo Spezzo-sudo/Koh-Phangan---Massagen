@@ -1,21 +1,24 @@
 
-import React from 'react';
-import { SERVICES } from '../constants';
+import React, { useMemo } from 'react';
 import { Calendar, MapPin, Clock, AlertTriangle, Check, Bike, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useData, useAuth, useLanguage } from '../contexts';
+import { useServices } from '../lib/queries';
 import { Booking } from '../types';
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const { bookings } = useData();
   const { t } = useLanguage();
+  const { data: services = [], isLoading: servicesLoading } = useServices();
 
-  const myBookings = bookings.filter(b => 
-    b.customerName === user?.name || b.id.startsWith('b1') 
+  const myBookings = bookings.filter(b =>
+    b.customerName === user?.name || b.id.startsWith('b1')
   );
 
-  const getServiceName = (id: string) => SERVICES.find(s => s.id === id)?.title || 'Unknown Service';
+  const getServiceName = useMemo(() => {
+    return (id: string) => services.find(s => s.id === id)?.title || 'Unknown Service';
+  }, [services]);
 
   // Helper to render the Delivery-Style Timeline
   const StatusTimeline = ({ status }: { status: Booking['status'] }) => {

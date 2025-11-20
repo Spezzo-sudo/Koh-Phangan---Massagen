@@ -1,9 +1,12 @@
 
 import React, { useState } from 'react';
-import { PRODUCTS } from '../constants';
 import { ShoppingBag, Plus, X, Minus, Trash2, ShoppingCart, CheckCircle, Truck, AlertCircle } from 'lucide-react';
 import { useData, useAuth } from '../contexts';
 import { useNavigate } from 'react-router-dom';
+
+// ⚠️ NOTE: PRODUCTS are now loaded from Supabase public.products table
+// TODO: Implement useProducts() hook in lib/queries.ts for Phase 2
+const PRODUCTS: any[] = []; // Empty for now - shop feature coming in Phase 2
 
 export default function ShopPage() {
   const { addToCart, cart, removeFromCart, updateCartQuantity, cartTotal, clearCart } = useData();
@@ -16,8 +19,8 @@ export default function ShopPage() {
 
   const categories = ['All', 'Oils', 'Balms', 'Aroma', 'Nail Polish', 'Makeup'];
 
-  const filteredProducts = selectedCategory === 'All' 
-    ? PRODUCTS 
+  const filteredProducts = selectedCategory === 'All'
+    ? PRODUCTS
     : PRODUCTS.filter(p => p.category === selectedCategory);
 
   const handleAddToCart = (product: any) => {

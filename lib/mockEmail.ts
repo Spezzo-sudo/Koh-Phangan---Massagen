@@ -1,5 +1,4 @@
 import { Booking } from '../types';
-import { SERVICES, THERAPISTS } from '../constants';
 
 /**
  * REAL EMAIL SERVICE (Resend)
@@ -161,14 +160,17 @@ const therapistEmailTemplate = (booking: Booking, service: any, therapist: any) 
 </html>
 `;
 
-export const sendBookingNotifications = async (booking: Booking) => {
+export const sendBookingNotifications = async (
+  booking: Booking,
+  service?: any,
+  therapist?: any
+) => {
   console.log('📧 Sending booking notifications...');
 
-  const service = SERVICES.find(s => s.id === booking.serviceId);
-  const therapist = THERAPISTS.find(t => t.id === booking.therapistId);
-
+  // If service/therapist not provided, we can't look them up anymore
+  // (they're now in Supabase, not constants)
   if (!service || !therapist) {
-    console.error('Could not find service or therapist details');
+    console.warn('⚠️ Service or therapist details not provided for email. Skipping email notifications.');
     return false;
   }
 

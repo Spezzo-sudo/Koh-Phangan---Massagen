@@ -1,16 +1,47 @@
 
 import React, { useState, useMemo } from 'react';
-import { THERAPISTS, TIME_SLOTS } from '../constants';
+import { TIME_SLOTS } from '../constants';
 import { Calendar, Clock, MapPin, CheckCircle, XCircle, Power, Lock, Unlock, ChevronRight, ChevronLeft } from 'lucide-react';
-import { useData } from '../contexts';
+import { useAuth, useData } from '../contexts';
+import { useTherapists, useBookings } from '../lib/queries';
 
 export default function TherapistDashboard() {
-  // Simulate "Ms. Ang" is logged in (t1)
-  const loggedInTherapistId = 't1';
-  const { bookings, updateBookingStatus, therapists, toggleTherapistBlock } = useData();
-  
-  const currentTherapist = therapists.find(t => t.id === loggedInTherapistId) || THERAPISTS[0];
-  const [isAvailable, setIsAvailable] = useState(currentTherapist.available);
+  const { user } = useAuth();
+  // Use the logged-in user's ID as the therapist ID
+  const loggedInTherapistId = user?.id || 't1';
+
+  const { updateBookingStatus, toggleTherapistBlock } = useData();
+  const { data: therapists = [], isLoading: therapistsLoading } = useTherapists();
+  const { data: allBookings = [], isLoading: bookingsLoading } = useBookings(loggedInTherapistId);
+
+  // Get current therapist profile
+  const currentTherapist = therapists.find(t => t.id === loggedInTherapistId);
+
+  // Show loading state while fetching therapist data
+  if (therapistsLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-gray-500">Loading therapist profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if therapist not found
+  if (!currentTherapist) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <p className="text-red-700 font-medium">Therapist profile not found. Please contact support.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter bookings for this therapist (already filtered by useBookings hook)
+  const myBookings = allBookings;
+  const [isAvailable, setIsAvailable] = useState(currentTherapist?.available ?? true);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -21,11 +52,11 @@ export default function TherapistDashboard() {
       setSelectedDate(newDate);
   };
 
-  // Filter bookings for this therapist
-  const myBookings = bookings.filter(b => b.therapistId === currentTherapist.id);
-
   // Filter bookings for Selected Date only
-  const daysBookings = myBookings.filter(b => new Date(b.date).toDateString() === selectedDate.toDateString());
+  const daysBookings = myBookings.filter(b => {
+    const bookingDate = new Date(b.scheduled_date).toDateString();
+    return bookingDate === selectedDate.toDateString();
+  });
 
   // Build Schedule Grid
   const schedule = useMemo(() => {
@@ -34,13 +65,13 @@ export default function TherapistDashboard() {
 
       for (const time of TIME_SLOTS) {
           const dateTimeString = `${dateStr} ${time}`;
-          
+
           // Check if Blocked
-          const isBlocked = currentTherapist.blockedSlots?.includes(dateTimeString);
-          
+          const isBlocked = currentTherapist?.blockedSlots?.includes(dateTimeString);
+
           // Check if Booked
           const booking = daysBookings.find(b => {
-             const bTime = parseInt(b.time.split(':')[0]);
+             const bTime = parseInt(b.scheduled_time.split(':')[0]);
              const slotTime = parseInt(time.split(':')[0]);
              // Simple check: starts at this time OR covers this time
              const bEnd = bTime + (b.duration / 60);
@@ -54,7 +85,7 @@ export default function TherapistDashboard() {
           });
       }
       return grid;
-  }, [selectedDate, currentTherapist.blockedSlots, daysBookings]);
+  }, [selectedDate, currentTherapist?.blockedSlots, daysBookings]);
 
 
   const toggleAvailability = () => {

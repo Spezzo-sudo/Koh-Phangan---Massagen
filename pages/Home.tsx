@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Sparkles, Users, Heart } from 'lucide-react';
-import { SERVICES } from '../constants';
+import { useServices } from '../lib/queries';
 import { useSEO } from '../hooks/useSEO';
 import SEOStructuredData from '../components/SEOStructuredData';
 
@@ -13,9 +13,17 @@ export default function Home() {
     image: "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?auto=format&fit=crop&w=1600&q=80"
   });
 
+  const { data: SERVICES = [] } = useServices();
+
   // Filter to show specific categories in different sections
-  const massageServices = SERVICES.filter(s => s.category === 'Massage').slice(0, 2);
-  const beautyServices = SERVICES.filter(s => s.category === 'Nails' || s.category === 'Packages').slice(0, 2);
+  const massageServices = useMemo(() =>
+    SERVICES.filter(s => s.category === 'Massage').slice(0, 2),
+    [SERVICES]
+  );
+  const beautyServices = useMemo(() =>
+    SERVICES.filter(s => s.category === 'Nails' || s.category === 'Packages').slice(0, 2),
+    [SERVICES]
+  );
 
   return (
     <div>

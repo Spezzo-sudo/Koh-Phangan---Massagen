@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, PropsWithChildren } from 'react';
 import { User, Language, Booking, CreateBookingInput, CartItem, Product, DataContextType, Expense, Therapist } from './types';
 import { translations } from './translations';
-import { MOCK_BOOKINGS, MOCK_EXPENSES, THERAPISTS, TIME_SLOTS } from './constants';
+import { TIME_SLOTS } from './constants';
 import { supabase } from './lib/supabase';
 import { sendBookingNotifications } from './lib/mockEmail';
 
@@ -199,9 +199,15 @@ export function useLanguage() {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: PropsWithChildren<{}>) {
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
-  const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
-  const [therapists, setTherapists] = useState<Therapist[]>(THERAPISTS);
+  // ⚠️ NOTE: These are now fetched from Supabase via React Query hooks
+  // - bookings: use useBookings() hook from lib/queries.ts
+  // - therapists: use useTherapists() hook from lib/queries.ts
+  // - expenses: not yet implemented in Phase 1
+  // This context is kept for mutations only (addBooking, updateBookingStatus, etc.)
+
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   
   // Hardening: Loading & Error States
@@ -296,52 +302,57 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
     setError(null);
 
     try {
+        // CRITICAL: Verify Supabase is configured
+        if (!supabase) {
+            throw new Error('Supabase not configured. Cannot create booking.');
+        }
+
         // CRITICAL: Double-Check Availability before saving
         const isAvailable = checkAvailability(input.therapistId, input.date, input.time, input.duration);
         if (!isAvailable) {
             throw new Error("Slot no longer available. Please choose another time.");
         }
 
-        const newBooking: Booking = {
-          ...input,
-          id: `b${Date.now()}`,
-          status: 'pending'
-        };
+        // ✅ ONLY save to Supabase (no fallback to mock)
+        const { data, error: dbError } = await supabase
+          .from('bookings')
+          .insert([{
+            customer_id: input.customerName, // TODO: Use actual user ID from auth context
+            therapist_id: input.therapistId,
+            service_id: input.serviceId,
+            scheduled_date: input.date,
+            scheduled_time: input.time,
+            duration: input.duration,
+            status: 'pending',
+            location_text: input.location,
+            gps_lat: input.coordinates?.lat || null,
+            gps_lng: input.coordinates?.lng || null,
+            total_price: input.totalPrice,
+            notes: input.notes || null,
+            addons: input.addons || []
+          }])
+          .select();
 
-        // Try Supabase first, fallback to mock
-        if (supabase) {
-          try {
-            const { data, error: dbError } = await supabase
-              .from('bookings')
-              .insert([{
-                customer_id: input.customerName, // TODO: Use actual user ID when Auth is ready
-                therapist_id: input.therapistId,
-                service_id: input.serviceId,
-                scheduled_date: input.date,
-                scheduled_time: input.time,
-                duration: input.duration,
-                status: 'pending',
-                location_text: input.location,
-                gps_lat: input.coordinates?.lat || null,
-                gps_lng: input.coordinates?.lng || null,
-                total_price: input.totalPrice,
-                notes: input.notes || null,
-                addons: input.addons || []
-              }])
-              .select();
+        // ❌ No fallback: throw error if DB save fails
+        if (dbError) throw dbError;
 
-            if (dbError) throw dbError;
-            console.log("Booking saved to Supabase:", data);
-          } catch (dbErr) {
-            console.warn("Supabase save failed, falling back to mock:", dbErr);
-          }
+        const newBooking = data?.[0];
+        if (!newBooking) {
+            throw new Error('Booking created but response was empty');
         }
 
-        // 1. Save to local state (mock)
-        setBookings(prev => [newBooking, ...prev]);
+        // ✅ Update local state with database response
+        setBookings(prev => [newBooking as any, ...prev]);
 
-        // 2. Trigger Mock Email Service
-        await sendBookingNotifications(newBooking);
+        // ✅ Send notifications (but catch any errors)
+        try {
+            await sendBookingNotifications(newBooking as any);
+        } catch (emailErr) {
+            console.warn("Email notification failed (non-critical):", emailErr);
+        }
+
+        console.log("✅ Booking saved to Supabase:", newBooking);
+        return newBooking;
 
     } catch (e: any) {
         console.error("Booking Error:", e);

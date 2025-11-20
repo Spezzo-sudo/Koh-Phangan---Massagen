@@ -2,11 +2,22 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Menu, ShoppingBag, Calendar, User as UserIcon, MapPin, LogIn, LogOut, Globe, Shield, Lock } from 'lucide-react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import LegalFooter from './components/LegalFooter';
 import { AuthProvider, LanguageProvider, DataProvider, useAuth, useLanguage, useData } from './contexts';
 import { Language } from './types';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingSpinner from './components/LoadingSpinner';
+
+// Initialize React Query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // --- LAZY LOADED PAGES (Code Splitting) ---
 const Home = lazy(() => import('./pages/Home'));
@@ -91,12 +102,12 @@ const Navbar = () => {
                 <Globe size={16} aria-hidden="true" />
                 <span className="uppercase">{language}</span>
             </button>
-            <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden hidden group-hover:block" role="menu">
+            <div className="absolute right-0 top-full pt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150" role="menu">
                 {languages.map(lang => (
-                    <button 
+                    <button
                         key={lang.code}
                         onClick={() => setLanguage(lang.code)}
-                        className="w-full text-left px-4 py-2 hover:bg-brand-light flex justify-between"
+                        className="w-full text-left px-4 py-2 hover:bg-brand-light flex justify-between transition-colors"
                         role="menuitem"
                     >
                         <span>{lang.code.toUpperCase()}</span>
@@ -178,37 +189,39 @@ const Footer = () => {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-        <AuthProvider>
-            <LanguageProvider>
-                <DataProvider>
-                    <BrowserRouter>
-                        <div className="min-h-screen flex flex-col font-sans">
-                            <Navbar />
-                            <main className="flex-grow md:pt-16 pb-20 md:pb-0">
-                            <Suspense fallback={<LoadingSpinner fullScreen />}>
-                                <Routes>
-                                    <Route path="/" element={<Home />} />
-                                    <Route path="/booking" element={<BookingPage />} />
-                                    <Route path="/therapists" element={<TherapistsPage />} />
-                                    <Route path="/shop" element={<ShopPage />} />
-                                    <Route path="/login" element={<LoginPage />} />
-                                    <Route path="/therapist/dashboard" element={<TherapistDashboard />} />
-                                    <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-                                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                                    <Route path="/privacy" element={<PrivacyPage />} />
-                                    <Route path="/terms" element={<TermsPage />} />
-                                    {/* Fallback Route for 404 */}
-                                    <Route path="*" element={<NotFoundPage />} />
-                                </Routes>
-                            </Suspense>
-                            </main>
-                            <Footer />
-                        </div>
-                    </BrowserRouter>
-                </DataProvider>
-            </LanguageProvider>
-        </AuthProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
+          <AuthProvider>
+              <LanguageProvider>
+                  <DataProvider>
+                      <BrowserRouter>
+                          <div className="min-h-screen flex flex-col font-sans">
+                              <Navbar />
+                              <main className="flex-grow md:pt-16 pb-20 md:pb-0">
+                              <Suspense fallback={<LoadingSpinner fullScreen />}>
+                                  <Routes>
+                                      <Route path="/" element={<Home />} />
+                                      <Route path="/booking" element={<BookingPage />} />
+                                      <Route path="/therapists" element={<TherapistsPage />} />
+                                      <Route path="/shop" element={<ShopPage />} />
+                                      <Route path="/login" element={<LoginPage />} />
+                                      <Route path="/therapist/dashboard" element={<TherapistDashboard />} />
+                                      <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+                                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                                      <Route path="/privacy" element={<PrivacyPage />} />
+                                      <Route path="/terms" element={<TermsPage />} />
+                                      {/* Fallback Route for 404 */}
+                                      <Route path="*" element={<NotFoundPage />} />
+                                  </Routes>
+                              </Suspense>
+                              </main>
+                              <Footer />
+                          </div>
+                      </BrowserRouter>
+                  </DataProvider>
+              </LanguageProvider>
+          </AuthProvider>
+      </ErrorBoundary>
+    </QueryClientProvider>
   );
 }

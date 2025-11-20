@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand, Crosshair, Users, Phone, Mail } from 'lucide-react';
-import { SERVICES, THERAPISTS, TIME_SLOTS, BOOKING_ADDONS } from '../constants';
+import { TIME_SLOTS, BOOKING_ADDONS } from '../constants';
 import { useAuth, useLanguage, useData } from '../contexts';
+import { useServices, useTherapists } from '../lib/queries';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
 import { ServiceCategory } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -24,7 +25,15 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
-  const { addBooking, isLoading, error, therapists, checkAvailability } = useData();
+  const { addBooking, isLoading: contextIsLoading, error: contextError, checkAvailability } = useData();
+
+  // ✅ Fetch data from Supabase via React Query
+  const { data: services = [], isLoading: servicesLoading, error: servicesError } = useServices();
+  const { data: therapists = [], isLoading: therapistsLoading, error: therapistsError } = useTherapists();
+
+  // Combine loading and error states
+  const isLoading = contextIsLoading || servicesLoading || therapistsLoading;
+  const error = contextError || servicesError?.message || therapistsError?.message;
   
   // Steps: 0: Service, 1: Addons, 2: Date/Time, 3: Therapist, 4: Details/Location, 5: Confirm
   const [step, setStep] = useState(0);
@@ -122,7 +131,7 @@ export default function BookingPage() {
   // Filter Logic: Find therapists who have the skill AND are available at the specific time
   const availableTherapists = useMemo(() => {
     if (!selectedServiceId) return [];
-    const service = SERVICES.find(s => s.id === selectedServiceId);
+    const service = services.find(s => s.id === selectedServiceId);
     if (!service) return [];
 
     return therapists.filter(t => {
@@ -142,15 +151,15 @@ export default function BookingPage() {
     }).sort((a, b) => b.rating - a.rating);
   }, [selectedServiceId, therapists, selectedTime, selectedDate, duration, checkAvailability]);
 
-  const selectedService = SERVICES.find(s => s.id === selectedServiceId);
+  const selectedService = services.find(s => s.id === selectedServiceId);
   const selectedTherapist = therapists.find(t => t.id === selectedTherapistId);
   const dates = getNextDays(5);
-  
+
   // Check if multiple staff are required
-  const requiresMultiStaff = selectedService?.staffRequired && selectedService.staffRequired > 1;
+  const requiresMultiStaff = selectedService?.staff_required && selectedService.staff_required > 1;
 
   // Calculate Total Price
-  const basePrice = duration === 60 ? selectedService?.price60 || 0 : selectedService?.price90 || 0;
+  const basePrice = duration === 60 ? selectedService?.price_60 || 0 : selectedService?.price_90 || 0;
   const addonsPrice = selectedAddons.reduce((sum, id) => {
       const addon = BOOKING_ADDONS.find(a => a.id === id);
       return sum + (addon?.price || 0);
@@ -330,7 +339,7 @@ export default function BookingPage() {
       );
   };
 
-  const filteredServices = SERVICES.filter(s => s.category === selectedCategory);
+  const filteredServices = services.filter(s => s.category === selectedCategory);
 
   if (step === 5) {
     return (
@@ -428,9 +437,9 @@ export default function BookingPage() {
                     >
                     <div className="relative mr-4">
                         <img src={service.image} alt={service.title} className="w-24 h-24 rounded-lg object-cover" />
-                        {service.staffRequired && service.staffRequired > 1 && (
+                        {service.staff_required && service.staff_required > 1 && (
                              <div className="absolute bottom-0 left-0 right-0 bg-purple-600/90 text-white text-[10px] font-bold text-center py-0.5 rounded-b-lg flex items-center justify-center gap-1">
-                                 <Users size={10} /> Team of {service.staffRequired}
+                                 <Users size={10} /> Team of {service.staff_required}
                              </div>
                         )}
                     </div>
@@ -441,7 +450,7 @@ export default function BookingPage() {
                         <p className="text-sm text-gray-500 line-clamp-2 mb-2">{service.description}</p>
                         <div className="mt-1 text-sm font-medium flex items-center gap-2">
                             <span className="bg-brand-sand px-2 py-0.5 rounded text-brand-dark text-xs font-bold">
-                                From {service.price60} THB
+                                From {service.price_60} THB
                             </span>
                         </div>
                     </div>
@@ -513,19 +522,19 @@ export default function BookingPage() {
           <div>
             <h3 className="font-bold mb-4 flex items-center gap-2"><Clock size={20} /> Select Option</h3>
             <div className="flex gap-4">
-              <button 
+              <button
                 onClick={() => setDuration(60)}
                 className={`flex-1 py-3 rounded-lg border-2 font-medium ${duration === 60 ? 'border-brand-teal bg-brand-teal/10 text-brand-teal' : 'border-gray-100'}`}
               >
-                 {selectedService?.category === 'Nails' ? 'Standard' : '60 Mins'} 
-                 <span className="block text-sm font-bold">({selectedService?.price60} THB)</span>
+                 {selectedService?.category === 'Nails' ? 'Standard' : '60 Mins'}
+                 <span className="block text-sm font-bold">({selectedService?.price_60} THB)</span>
               </button>
-              <button 
+              <button
                 onClick={() => setDuration(90)}
                 className={`flex-1 py-3 rounded-lg border-2 font-medium ${duration === 90 ? 'border-brand-teal bg-brand-teal/10 text-brand-teal' : 'border-gray-100'}`}
               >
-                {selectedService?.category === 'Nails' ? 'Premium/Spa' : '90 Mins'} 
-                <span className="block text-sm font-bold">({selectedService?.price90} THB)</span>
+                {selectedService?.category === 'Nails' ? 'Premium/Spa' : '90 Mins'}
+                <span className="block text-sm font-bold">({selectedService?.price_90} THB)</span>
               </button>
             </div>
           </div>
@@ -607,7 +616,7 @@ export default function BookingPage() {
               <div className="mb-6 bg-purple-50 border border-purple-100 p-3 rounded-lg flex gap-3">
                   <Users className="text-purple-600 shrink-0" size={20} />
                   <div className="text-sm text-purple-800">
-                      <strong>Team of {selectedService?.staffRequired}:</strong> Please select your LEAD specialist. A partner will automatically be assigned to assist.
+                      <strong>Team of {selectedService?.staff_required}:</strong> Please select your LEAD specialist. A partner will automatically be assigned to assist.
                   </div>
               </div>
           )}

@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
-import { THERAPISTS } from '../constants';
+import React, { useState, useMemo } from 'react';
 import { ServiceType } from '../types';
 import { Star, Sparkles, Hand, Instagram, Facebook } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTherapists } from '../lib/queries';
 import { useSEO } from '../hooks/useSEO';
 
 export default function TherapistsPage() {
@@ -13,13 +13,20 @@ export default function TherapistsPage() {
   });
 
   const [activeTab, setActiveTab] = useState<'massage' | 'beauty'>('massage');
+  const { data: THERAPISTS = [], isLoading } = useTherapists();
 
-  const massageTherapists = THERAPISTS.filter(t => 
-    !t.skills.includes(ServiceType.MANICURE) && !t.skills.includes(ServiceType.NAIL_ART)
+  const massageTherapists = useMemo(() =>
+    THERAPISTS.filter(t =>
+      !t.skills?.includes(ServiceType.MANICURE) && !t.skills?.includes(ServiceType.NAIL_ART)
+    ),
+    [THERAPISTS]
   );
 
-  const beautyArtists = THERAPISTS.filter(t => 
-    t.skills.includes(ServiceType.MANICURE) || t.skills.includes(ServiceType.NAIL_ART)
+  const beautyArtists = useMemo(() =>
+    THERAPISTS.filter(t =>
+      t.skills?.includes(ServiceType.MANICURE) || t.skills?.includes(ServiceType.NAIL_ART)
+    ),
+    [THERAPISTS]
   );
 
   const displayedTherapists = activeTab === 'massage' ? massageTherapists : beautyArtists;
