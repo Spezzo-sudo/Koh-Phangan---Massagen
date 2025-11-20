@@ -1,8 +1,10 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, PropsWithChildren } from 'react';
-import { User, Language, Booking, CreateBookingInput, CartItem, Product, DataContextType, Expense } from './types';
+import { User, Language, Booking, CreateBookingInput, CartItem, Product, DataContextType, Expense, Therapist } from './types';
 import { translations } from './translations';
-import { MOCK_BOOKINGS, MOCK_EXPENSES } from './constants';
+import { MOCK_BOOKINGS, MOCK_EXPENSES, THERAPISTS, TIME_SLOTS } from './constants';
 import { supabase } from './lib/supabase';
+import { sendBookingNotifications } from './lib/mockEmail';
 
 // --- Auth Context ---
 interface AuthContextType {
@@ -104,9 +106,13 @@ export function LanguageProvider({ children }: PropsWithChildren<{}>) {
       if (value && typeof value === 'object' && k in value) {
         value = value[k];
       } else {
-        return key; // Fallback to key if not found
+        // Safe fallback for [object Object] errors
+        return typeof value === 'string' ? value : key; 
       }
     }
+    
+    // Double check to prevent rendering objects
+    if (typeof value === 'object') return key;
     
     return value as string;
   };
@@ -134,6 +140,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export function DataProvider({ children }: PropsWithChildren<{}>) {
   const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
   const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
+  const [therapists, setTherapists] = useState<Therapist[]>(THERAPISTS);
   const [cart, setCart] = useState<CartItem[]>([]);
   
   // Hardening: Loading & Error States
@@ -143,50 +150,119 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
   // Helper for simulated network delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // SUPABASE TODO: Fetch bookings on mount
-  /*
-  useEffect(() => {
-    if (!supabase) return;
-    const fetchBookings = async () => {
-        setIsLoading(true);
-        try {
-            const { data, error } = await supabase.from('bookings').select('*');
-            if (error) throw error;
-            if (data) setBookings(data);
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    fetchBookings();
-    // ... Subscription logic ...
-  }, []);
-  */
+  /**
+   * Check if a therapist is available at a specific time slot
+   * Accounts for: 
+   * 1. Existing Bookings (including duration overlaps)
+   * 2. Manually blocked slots
+   * 3. Global availability
+   */
+  const checkAvailability = (therapistId: string, dateStr: string, time: string, duration: number): boolean => {
+      const therapist = therapists.find(t => t.id === therapistId);
+      if (!therapist || !therapist.available) return false;
+
+      const targetDate = new Date(dateStr).toDateString();
+
+      // 1. Check Manual Blocks
+      // blockedSlots format: "YYYY-MM-DD HH:mm"
+      const dateTimeString = `${new Date(dateStr).toISOString().split('T')[0]} ${time}`;
+      if (therapist.blockedSlots?.some(slot => {
+          // Very simple check: matches exactly or falls within range if we tracked duration of blocks
+          // For MVP, blocks are treated as 1-hour exclusions
+          return slot === dateTimeString;
+      })) {
+          return false;
+      }
+
+      // 2. Check Bookings
+      const relevantBookings = bookings.filter(b => 
+          b.therapistId === therapistId && 
+          new Date(b.date).toDateString() === targetDate &&
+          (b.status === 'confirmed' || b.status === 'pending' || b.status === 'in_progress')
+      );
+
+      const targetTimeVal = parseInt(time.split(':')[0]);
+      
+      for (const booking of relevantBookings) {
+          const bookingTimeVal = parseInt(booking.time.split(':')[0]);
+          const bookingDurationHours = booking.duration / 60; // 1 or 1.5
+          const targetDurationHours = duration / 60;
+
+          // Check overlap
+          // Event A starts before Event B ends AND Event B starts before Event A ends
+          const bookingEnd = bookingTimeVal + bookingDurationHours;
+          const targetEnd = targetTimeVal + targetDurationHours;
+
+          if (bookingTimeVal < targetEnd && targetTimeVal < bookingEnd) {
+              return false; // Overlap detected
+          }
+      }
+
+      return true;
+  };
+
+  const toggleTherapistBlock = (therapistId: string, dateStr: string, time: string) => {
+      setTherapists(prev => prev.map(t => {
+          if (t.id !== therapistId) return t;
+          
+          const dateTimeString = `${new Date(dateStr).toISOString().split('T')[0]} ${time}`;
+          const currentBlocks = t.blockedSlots || [];
+          
+          if (currentBlocks.includes(dateTimeString)) {
+              // Unblock
+              return { ...t, blockedSlots: currentBlocks.filter(s => s !== dateTimeString) };
+          } else {
+              // Block
+              return { ...t, blockedSlots: [...currentBlocks, dateTimeString] };
+          }
+      }));
+  };
+  
+  const updateTherapist = async (id: string, updates: Partial<Therapist>) => {
+      setIsLoading(true);
+      try {
+          await delay(500);
+          setTherapists(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+      } catch (e) {
+          setError("Failed to update therapist.");
+      } finally {
+          setIsLoading(false);
+      }
+  };
 
   const addBooking = async (input: CreateBookingInput) => {
     setIsLoading(true);
     setError(null);
     
     try {
-        // Simulate API Call Latency
-        await delay(1500); 
+        // CRITICAL: Double-Check Availability before saving
+        // This prevents race conditions in a real DB scenario (mostly)
+        const isAvailable = checkAvailability(input.therapistId, input.date, input.time, input.duration);
+        if (!isAvailable) {
+            throw new Error("Slot no longer available. Please choose another time.");
+        }
 
-        // SUPABASE TODO: 
-        // const { data, error } = await supabase.from('bookings').insert([{ ...input, status: 'pending' }]).select();
-        // if (error) throw error;
+        // Simulate API Call Latency (Database)
+        await delay(800); 
 
-        // Mock Logic:
         const newBooking: Booking = {
-        ...input,
-        id: `b${Date.now()}`, // Generate a random ID
-        status: 'pending'
+          ...input,
+          id: `b${Date.now()}`, // Generate a random ID
+          status: 'pending'
         };
+        
+        // 1. Save to "Database"
         setBookings(prev => [newBooking, ...prev]);
+
+        // 2. Trigger Mock Email Service
+        // Note: We don't await this necessarily in a real app (fire and forget), 
+        // but here we do to simulate the full processing time
+        await sendBookingNotifications(newBooking);
+
     } catch (e: any) {
         console.error("Booking Error:", e);
-        setError("Failed to create booking. Please try again.");
-        throw e; // Re-throw to let the UI handle it if needed
+        setError(e.message || "Failed to create booking.");
+        throw e; 
     } finally {
         setIsLoading(false);
     }
@@ -196,12 +272,7 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
     setIsLoading(true);
     try {
         // Simulate API Call
-        await delay(800);
-
-        // SUPABASE TODO:
-        // await supabase.from('bookings').update({ status }).eq('id', id);
-
-        // Mock Logic:
+        await delay(500);
         setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
     } catch (e: any) {
         setError("Failed to update status.");
@@ -263,6 +334,10 @@ export function DataProvider({ children }: PropsWithChildren<{}>) {
       bookings, 
       addBooking, 
       updateBookingStatus,
+      therapists,
+      toggleTherapistBlock,
+      checkAvailability,
+      updateTherapist,
       cart,
       addToCart,
       removeFromCart,

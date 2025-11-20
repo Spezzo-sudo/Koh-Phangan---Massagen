@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Sparkles, Users, Heart } from 'lucide-react';
@@ -9,7 +10,7 @@ export default function Home() {
   useSEO({
     title: "Mobile Massage, Nails & Beauty - Koh Phangan",
     description: "The #1 Mobile Spa on Koh Phangan. We offer Thai Massage, Gel Nails, Bridal Makeup, and Full Moon Party Styling at your villa.",
-    image: "https://picsum.photos/id/28/1600/900"
+    image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1600&q=80"
   });
 
   // Filter to show specific categories in different sections
@@ -22,10 +23,10 @@ export default function Home() {
       
       {/* Hero Section */}
       <div className="relative h-[85vh] w-full overflow-hidden">
-        <div className="absolute inset-0 bg-black/30 z-10"></div>
+        <div className="absolute inset-0 bg-black/20 z-10"></div>
         <img 
-          src="https://picsum.photos/id/28/1600/900" 
-          alt="Relaxing ocean view with spa setup on Koh Phangan" 
+          src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1600&q=80" 
+          alt="Beautiful Koh Phangan Beach with Coconut Palms and Turquoise Water" 
           className="absolute inset-0 w-full h-full object-cover"
           width="1600"
           height="900"
@@ -36,21 +37,21 @@ export default function Home() {
           <h1 className="font-serif text-5xl md:text-7xl text-white font-bold mb-6 drop-shadow-lg">
             Phangan Serenity
           </h1>
-          <p className="text-white/90 text-lg md:text-2xl max-w-xl mb-10 font-light leading-relaxed">
+          <p className="text-white/95 text-lg md:text-2xl max-w-xl mb-10 font-light leading-relaxed drop-shadow-md">
             Mobile Massage & Beauty Spa<br/>
-            <span className="text-base opacity-80">Massage • Nails • Full Moon Styling</span>
+            <span className="text-base opacity-90">Massage • Nails • Full Moon Styling</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link 
                 to="/booking" 
-                className="bg-brand-teal hover:bg-brand-dark text-white px-8 py-4 rounded-full font-medium transition-all transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg"
+                className="bg-brand-teal hover:bg-brand-dark text-white px-8 py-4 rounded-full font-medium transition-all transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg backdrop-blur-sm bg-opacity-90"
                 aria-label="Book a treatment"
             >
                 Book Treatment <ArrowRight size={18} aria-hidden="true" />
             </Link>
             <Link 
                 to="/shop" 
-                className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/40 px-8 py-4 rounded-full font-medium transition-all flex items-center justify-center gap-2"
+                className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/60 px-8 py-4 rounded-full font-medium transition-all flex items-center justify-center gap-2 shadow-lg"
             >
                 Shop Products
             </Link>

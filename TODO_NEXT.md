@@ -11,6 +11,7 @@ This document outlines the steps for the AI Agent to finalize the project.
 - [x] **UX:** Add 404 Not Found Page.
 - [x] **Security:** Add Input Validation (Regex for phone numbers) in Booking Flow.
 - [x] **Accessibility:** Add ARIA labels to navigation and buttons.
+- [x] **Notifications:** Implement Mock Email Notifications (console log) for bookings.
 - [ ] **Testing:** Setup Vitest/Jest and write basic unit tests for `contexts.tsx`.
 - [ ] **Linting:** Add ESLint and Prettier configuration.
 
@@ -34,5 +35,6 @@ This document outlines the steps for the AI Agent to finalize the project.
 - [ ] **Register Page:** Create a registration form (currently simulated).
 
 ## Phase 4: Polish & Deployment
+- [ ] **Notifications:** Replace `lib/mockEmail.ts` with real email service (Resend/SendGrid).
 - [ ] **SEO:** Add meta tags for Koh Phangan keywords.
 - [ ] **Deploy:** Push to Vercel/Netlify.

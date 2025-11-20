@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand, Crosshair, Users, Phone } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CheckCircle, ChevronRight, ChevronLeft, Star, MapPin, Search, Lock, AlertTriangle, Check, Sparkles, Hand, Crosshair, Users, Phone, Mail } from 'lucide-react';
 import { SERVICES, THERAPISTS, TIME_SLOTS, BOOKING_ADDONS } from '../constants';
 import { useAuth, useLanguage, useData } from '../contexts';
 import { usePlacesAutocomplete } from '../hooks/usePlacesAutocomplete';
@@ -24,7 +24,7 @@ export default function BookingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
-  const { addBooking, isLoading, error } = useData();
+  const { addBooking, isLoading, error, therapists, checkAvailability } = useData();
   
   // Steps: 0: Service, 1: Addons, 2: Date/Time, 3: Therapist, 4: Details/Location, 5: Confirm
   const [step, setStep] = useState(0);
@@ -43,6 +43,7 @@ export default function BookingPage() {
   // Pre-fill customer details if logged in
   const [customerDetails, setCustomerDetails] = useState({ 
       name: user?.name || '', 
+      email: user?.email || '', // Added email field
       phone: '', 
       notes: '', 
       address: '' 
@@ -76,7 +77,8 @@ export default function BookingPage() {
                       ...prev,
                       ...parsed.customerDetails,
                       // If user logged in, prioritize their auth name over the saved name unless empty
-                      name: user?.name || parsed.customerDetails.name
+                      name: user?.name || parsed.customerDetails.name,
+                      email: user?.email || parsed.customerDetails.email
                   }));
               }
               if (parsed.step) setStep(parsed.step);
@@ -88,7 +90,7 @@ export default function BookingPage() {
           }
       } else if (user) {
           // Standard behavior: fill name if logged in
-          setCustomerDetails(prev => ({...prev, name: user.name}));
+          setCustomerDetails(prev => ({...prev, name: user.name, email: user.email}));
       }
   }, [user]); // Run when user auth state settles
   
@@ -117,20 +119,31 @@ export default function BookingPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter Logic: Find therapists who have the skill for the selected service
+  // Filter Logic: Find therapists who have the skill AND are available at the specific time
   const availableTherapists = useMemo(() => {
     if (!selectedServiceId) return [];
     const service = SERVICES.find(s => s.id === selectedServiceId);
     if (!service) return [];
 
-    // Sort logic: Verified & High Rating first
-    return THERAPISTS.filter(t => 
-      t.skills.includes(service.type) && t.available
-    ).sort((a, b) => b.rating - a.rating);
-  }, [selectedServiceId]);
+    return therapists.filter(t => {
+        // 1. Check Skills
+        if (!t.skills.includes(service.type)) return false;
+        
+        // 2. Check Global Availability
+        if (!t.available) return false;
+
+        // 3. Check Specific Time Slot (Conflict Checking)
+        // Only check if we actually have a time selected
+        if (selectedTime && selectedDate) {
+            return checkAvailability(t.id, selectedDate.toISOString(), selectedTime, duration);
+        }
+
+        return true;
+    }).sort((a, b) => b.rating - a.rating);
+  }, [selectedServiceId, therapists, selectedTime, selectedDate, duration, checkAvailability]);
 
   const selectedService = SERVICES.find(s => s.id === selectedServiceId);
-  const selectedTherapist = THERAPISTS.find(t => t.id === selectedTherapistId);
+  const selectedTherapist = therapists.find(t => t.id === selectedTherapistId);
   const dates = getNextDays(5);
   
   // Check if multiple staff are required
@@ -196,6 +209,14 @@ export default function BookingPage() {
       if (!customerDetails.name.trim()) errors.name = "Name is required";
       if (!customerDetails.address.trim()) errors.address = "Location is required";
       
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!customerDetails.email.trim()) {
+          errors.email = "Email is required for confirmation";
+      } else if (!emailRegex.test(customerDetails.email)) {
+          errors.email = "Invalid email address";
+      }
+
       // Strict Phone Regex: Allows +, (), space, -, .
       const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
       if (!customerDetails.phone.trim()) {
@@ -250,6 +271,7 @@ export default function BookingPage() {
                 addons: selectedAddons,
                 totalPrice: totalPrice,
                 customerName: customerDetails.name,
+                customerEmail: customerDetails.email,
                 customerPhone: customerDetails.phone,
                 location: customerDetails.address,
                 notes: customerDetails.notes,
@@ -325,6 +347,9 @@ export default function BookingPage() {
           </span>
           <span className="block mt-2 text-sm">
              on {selectedDate.toLocaleDateString()} at {selectedTime}.
+          </span>
+          <span className="block mt-4 text-xs text-gray-500 bg-gray-50 p-2 rounded">
+             📧 A confirmation email has been sent to {customerDetails.email}
           </span>
         </p>
         
@@ -741,6 +766,28 @@ export default function BookingPage() {
                 />
                 {validationErrors.name && <p className="text-red-500 text-xs mt-1">{validationErrors.name}</p>}
               </div>
+
+              {/* EMAIL FIELD (NEW) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    Email (for confirmation) *
+                </label>
+                <div className="relative">
+                    <input 
+                    type="email" 
+                    className={`w-full pl-10 px-4 py-2 rounded-lg border outline-none ${validationErrors.email ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-2 focus:ring-brand-teal'}`}
+                    placeholder="name@example.com"
+                    value={customerDetails.email}
+                    onChange={e => {
+                        setCustomerDetails({...customerDetails, email: e.target.value});
+                        setValidationErrors(prev => ({...prev, email: ''}));
+                    }}
+                    />
+                    <Mail size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                </div>
+                {validationErrors.email && <p className="text-red-500 text-xs mt-1">{validationErrors.email}</p>}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
                     Phone / WhatsApp * 

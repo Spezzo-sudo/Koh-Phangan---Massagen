@@ -40,7 +40,7 @@ export interface Therapist {
   skills: ServiceType[];
   bio: string;
   rating: number;
-  available: boolean;
+  available: boolean; // Global "On/Off" switch
   locationBase: string; // Where they are based
   verified?: boolean;
   reviewCount?: number;
@@ -50,6 +50,8 @@ export interface Therapist {
       facebook?: string;
       website?: string;
   };
+  // NEW: Specific blocked slots (e.g. "2024-03-20T14:00")
+  blockedSlots?: string[]; 
 }
 
 export interface Product {
@@ -75,6 +77,7 @@ export interface Booking {
   addons: string[]; // Array of Addon IDs
   totalPrice: number;
   customerName: string;
+  customerEmail?: string; // Added for email notifications
   customerPhone: string;
   location: string; // Address or Hotel Name
   coordinates?: { lat: number; lng: number }; // For Maps
@@ -126,6 +129,13 @@ export interface DataContextType {
   bookings: Booking[];
   addBooking: (booking: CreateBookingInput) => Promise<void>; // Async now
   updateBookingStatus: (id: string, status: Booking['status']) => Promise<void>; // Async now
+  
+  // Availability Management
+  therapists: Therapist[];
+  toggleTherapistBlock: (therapistId: string, date: string, time: string) => void;
+  checkAvailability: (therapistId: string, date: string, time: string, duration: number) => boolean;
+  updateTherapist: (id: string, updates: Partial<Therapist>) => Promise<void>; // NEW: For Admin Management
+
   // Cart
   cart: CartItem[];
   addToCart: (product: Product) => void;

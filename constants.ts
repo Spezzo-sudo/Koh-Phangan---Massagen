@@ -1,3 +1,4 @@
+
 import { Service, ServiceType, Therapist, Product, Booking, Addon, Expense } from './types';
 
 export const SERVICES: Service[] = [
@@ -155,7 +156,8 @@ export const THERAPISTS: Therapist[] = [
     locationBase: 'Thong Sala',
     verified: true,
     reviewCount: 124,
-    recentReview: "Best Thai massage I've ever had!"
+    recentReview: "Best Thai massage I've ever had!",
+    blockedSlots: []
   },
   {
     id: 't2',
@@ -168,7 +170,8 @@ export const THERAPISTS: Therapist[] = [
     locationBase: 'Srithanu',
     verified: true,
     reviewCount: 89,
-    recentReview: "Fixed my back pain in one session."
+    recentReview: "Fixed my back pain in one session.",
+    blockedSlots: []
   },
   {
     id: 't3',
@@ -181,7 +184,8 @@ export const THERAPISTS: Therapist[] = [
     locationBase: 'Haad Rin',
     verified: false,
     reviewCount: 45,
-    recentReview: "Very relaxing and professional."
+    recentReview: "Very relaxing and professional.",
+    blockedSlots: []
   },
   {
     id: 't4',
@@ -198,7 +202,8 @@ export const THERAPISTS: Therapist[] = [
     socialHandles: {
         instagram: 'may.nails.phangan',
         facebook: 'maybeautyphangan'
-    }
+    },
+    blockedSlots: []
   },
   {
     id: 't5',
@@ -214,7 +219,8 @@ export const THERAPISTS: Therapist[] = [
     recentReview: "Love my new nails, thank you!",
     socialHandles: {
         instagram: 'pim_creative_nails'
-    }
+    },
+    blockedSlots: []
   }
 ];
 

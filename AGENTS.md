@@ -43,6 +43,11 @@ There is a strict separation in the UI and Logic between:
 *   **Lead Time:** Bookings for the *same day* require at least **2 hours** notice (travel time buffer).
 *   **Cancellation:** Free up to 5 hours before. Full price charged if no-show (enforced via Terms agreement in MVP, via Card hold in v2).
 
+### G. Notifications (Mock System)
+*   **Emails:** Currently, emails to customers and therapists are **simulated**.
+*   **Implementation:** See `lib/mockEmail.ts`. The system logs the full email content to the Browser Console.
+*   **Future:** This must be replaced by a real service (Resend/SendGrid/Supabase Edge Functions).
+
 ## 3. Architecture & State
 *   **Data Source:** Currently `constants.ts` (In-Memory).
 *   **Persistence:** None (Refreshes reset data).
