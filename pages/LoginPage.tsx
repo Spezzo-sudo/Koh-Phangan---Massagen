@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, signUp } = useAuth();
-  const [mode, setMode] = useState<'select' | 'login' | 'signup' | 'confirm-email'>('select');
+  const [mode, setMode] = useState<'select' | 'login' | 'signup' | 'confirm-email' | 'forgot-password'>('select');
   const [role, setRole] = useState<'customer' | 'therapist' | 'admin'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   const getDashboardPath = (userRole: string) => {
     const dashboardMap: Record<string, string> = {
@@ -69,6 +70,39 @@ export default function LoginPage() {
       setTimeout(() => setResendSuccess(''), 8000);
     } finally {
       setResendLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setResetSuccess('');
+    setIsLoading(true);
+    try {
+      if (!email) {
+        setError('Please enter your email address.');
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      setResetSuccess(
+        '✅ Password reset link sent! Check your email for instructions. ' +
+        'If you don\'t see it, check your spam folder.'
+      );
+      setTimeout(() => {
+        setResetSuccess('');
+        setEmail('');
+        setMode('login');
+      }, 5000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send reset link. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -182,6 +216,75 @@ export default function LoginPage() {
                 setResendSuccess('');
               }}
               className="text-brand-teal font-medium hover:underline text-sm mt-2"
+            >
+              Back to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Forgot Password View
+  if (mode === 'forgot-password') {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 bg-brand-sand/30 py-10">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+          <h1 className="font-serif text-3xl font-bold text-brand-dark mb-2 text-center">
+            Reset Password
+          </h1>
+          <p className="text-gray-600 mb-6 text-center text-sm">
+            Enter your email address and we'll send you a link to reset your password.
+          </p>
+
+          {error && (
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2 items-start">
+              <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          )}
+
+          {resetSuccess && (
+            <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg flex gap-2 items-start">
+              <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-green-700 text-sm">{resetSuccess}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+              <div className="relative">
+                <Mail size={18} className="absolute left-3 top-3 text-gray-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent outline-none transition"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-brand-teal text-white py-2 rounded-lg font-medium hover:bg-brand-teal/90 disabled:opacity-50 transition mt-6"
+            >
+              {isLoading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => {
+                setMode('login');
+                setError('');
+                setResetSuccess('');
+                setEmail('');
+              }}
+              className="text-gray-500 text-sm hover:text-brand-dark transition"
             >
               Back to Sign In
             </button>
@@ -319,16 +422,26 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-3">
           {mode === 'login' ? (
             <>
-              <p className="text-gray-600 text-sm">Don't have an account?</p>
-              <button
-                onClick={() => setMode('signup')}
-                className="text-brand-teal font-medium hover:underline text-sm mt-2"
-              >
-                Sign up here
-              </button>
+              <div>
+                <p className="text-gray-600 text-sm">Don't have an account?</p>
+                <button
+                  onClick={() => setMode('signup')}
+                  className="text-brand-teal font-medium hover:underline text-sm mt-2"
+                >
+                  Sign up here
+                </button>
+              </div>
+              <div className="pt-2 border-t border-gray-200">
+                <button
+                  onClick={() => setMode('forgot-password')}
+                  className="text-gray-500 text-xs hover:text-brand-teal transition"
+                >
+                  Forgot password?
+                </button>
+              </div>
             </>
           ) : (
             <>
