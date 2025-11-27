@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Standard Meta Tags -->
+  <title>Phangan Serenity | Mobile Massage, Nails & Beauty</title>
+  <meta name="description"
+    content="Premium mobile massage, gel nails, makeup, and Full Moon Party styling on Koh Phangan. We come to your villa or hotel." />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://phanganserenity.com/" />
+  <meta property="og:title" content="Phangan Serenity | Mobile Spa & Beauty" />
+  <meta property="og:description"
+    content="Premium mobile massage, gel nails, makeup, and Full Moon Party styling on Koh Phangan. Delivered to your door." />
+  <meta property="og:image" content="https://picsum.photos/id/28/1200/630" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://phanganserenity.com/" />
+  <meta property="twitter:title" content="Phangan Serenity | Mobile Spa & Beauty" />
+  <meta property="twitter:description"
+    content="Premium mobile massage, gel nails, and beauty services on Koh Phangan." />
+  <meta property="twitter:image" content="https://picsum.photos/id/28/1200/630" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            serif: ['Playfair Display', 'serif'],
+          },
+          colors: {
+            brand: {
+              teal: '#0d9488',
+              dark: '#115e59',
+              light: '#ccfbf1',
+              sand: '#f5f5f4',
+              gold: '#d97706'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      font-family: 'Playfair Display', serif;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+        "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.83.0",
+        "vite": "https://aistudiocdn.com/vite@^7.2.4",
+        "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+      }
+    }
+    </script>
+</head>
+
+<body class="bg-brand-sand text-gray-800 antialiased selection:bg-brand-teal selection:text-white">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>

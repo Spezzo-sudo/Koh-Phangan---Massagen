@@ -1,0 +1,61 @@
+--- contexts.tsx.old
++++ contexts.tsx.new
+@@ -141,29 +141,48 @@
+ 
+   const addBooking = async (input: CreateBookingInput) => {
+     setIsLoading(true);
++    setError(null);
+     try {
+         if (!supabase) throw new Error('Supabase offline');
+ 
+         // 1. Check Availability (DB)
+         const isAvailable = await checkDbAvailability(input.therapistId, input.date, input.time, input.duration);
+         if (!isAvailable) throw new Error("Slot no longer available.");
+ 
+-        // 2. Insert to DB
++        // 2. Insert to DB (map camelCase to snake_case)
+         const { data, error } = await supabase.from('bookings').insert([{
+-            customer_id: input.customerId, // Achtung: Muss vom Frontend übergeben werden!
++            customer_id: input.customerId || null,
+             therapist_id: input.therapistId,
+             service_id: input.serviceId,
+             scheduled_date: input.date,
+             scheduled_time: input.time,
+             duration: input.duration,
+             status: 'pending',
+             location_text: input.location,
++            gps_lat: input.coordinates?.lat || null,
++            gps_lng: input.coordinates?.lng || null,
+             total_price: input.totalPrice,
++            notes: input.notes || null,
+-            addons: input.addons
++            addons: input.addons || []
+         }]).select().single();
+ 
+         if (error) throw error;
++        if (!data) throw new Error('No booking data returned from DB');
+ 
+-        // 3. Cache invalidieren (Damit die UI sich aktualisiert!)
++        // 3. Cache invalidieren
+         await queryClient.invalidateQueries({ queryKey: ['bookings'] });
+ 
+-        // 4. Email (Mock)
+-        await sendBookingNotifications(data as any);
++        // 4. Email (best-effort)
++        try {
++            await sendBookingNotifications(data as any);
++        } catch (emailErr) {
++            console.warn('Email notification failed (non-critical):', emailErr);
++        }
++
++        console.log('✅ Booking created:', data.id);
+ 
+     } catch (err: any) {
+-        console.error(err);
+-        setError(err.message);
++        console.error('❌ Booking error:', err);
++        setError(err.message || 'Failed to create booking');
++        throw err;
+     } finally {
+         setIsLoading(false);
+     }

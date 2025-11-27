@@ -1,0 +1,21 @@
+.env
+
+# --- Bilder und Medien ignorieren (WICHTIG für Claude/AI) ---
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.webp
+*.ico
+*.mp4
+*.mov
+*.avi
+
+# --- System-Ordner und Müll ---
+node_modules/
+dist/
+build/
+.git/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,15 @@
+﻿node_modules/
+.git/
+dist/
+build/
+.next/
+coverage/
+*.map
+*.pack
+*.exe
+*.log
+package-lock.json
+yarn.lock
+*.jpg
+*.png
+*.mp4

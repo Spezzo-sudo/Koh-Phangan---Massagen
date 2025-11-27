@@ -1,0 +1,15 @@
+# AI Behavior Rules
+
+1.  **Context Optimization**:
+    - READ `CLAUDE.md` FIRST to understand the project structure.
+    - DO NOT read `node_modules`, `dist`, or `public` folders.
+    - Focus on `types.ts` and `contexts.tsx` for business logic.
+
+2.  **Coding Standards**:
+    - Use TypeScript with strict types.
+    - Use TailwindCSS for styling.
+    - Use Lucide React for icons (NO EMOJIS).
+
+3.  **Architecture**:
+    - This is a Supabase + React project.
+    - All state changes must sync with Supabase.
